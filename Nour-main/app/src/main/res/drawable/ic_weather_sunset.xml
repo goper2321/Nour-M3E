@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Horizon Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.6"
+        android:pathData="M3,19 L21,19" />
+    <!-- Setting Sun Half Disk -->
+    <path
+        android:fillColor="#EA580C"
+        android:pathData="M6.5,19 C6.5,15.96 8.96,13.5 12,13.5 C15.04,13.5 17.5,15.96 17.5,19 Z" />
+    <!-- Downward arrow indicating sunset -->
+    <path
+        android:strokeColor="#FCA5A5"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,3 L12,10 M9,7 L12,10 L15,7" />
+    <!-- Radiating dusk sunbeams -->
+    <path
+        android:strokeColor="#F97316"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M5,14 L3.5,13 M19,14 L20.5,13 M7.5,10.5 L6,9 M16.5,10.5 L18,9" />
+</vector>

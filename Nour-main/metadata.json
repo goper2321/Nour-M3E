@@ -1,0 +1,6 @@
+{
+  "name": "Nour",
+  "description": "Nour - Privacy-focused Islamic Companion with Offline Prayer Times, Adhan Exact Alarms, Qibla Compass, and 604-Page Quran Mushaf",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

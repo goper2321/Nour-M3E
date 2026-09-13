@@ -1,0 +1,95 @@
+import { css, CSSResultGroup, html, PropertyValues } from "lit";
+import { query } from "lit/decorators.js";
+
+import {
+  AttachInternals,
+  customElement,
+  Disabled,
+  Focusable,
+  FocusController,
+  HoverController,
+  KeyboardClick,
+  LinkButton,
+  M3eFocusRingElement,
+  M3eRippleElement,
+  M3eStateLayerElement,
+  PressedController,
+  renderPseudoLink,
+  Role,
+} from "@m3e/web/core";
+
+import { M3eListItemElement } from "./ListItemElement";
+
+/**
+ * @internal
+ * An internal interactive element used to present the content of a list item.
+ */
+@customElement("m3e-list-item-button")
+export class M3eListItemButtonElement extends KeyboardClick(
+  LinkButton(Focusable(Disabled(AttachInternals(Role(M3eListItemElement, "button"), true)))),
+) {
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = [
+    M3eListItemElement.styles,
+    css`
+      :host {
+        outline: none;
+        user-select: none;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+      }
+      .base {
+        position: relative;
+      }
+      :host(:not(:disabled)) {
+        cursor: pointer;
+      }
+      a {
+        all: unset;
+        display: block;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        bottom: 0px;
+        z-index: 1;
+      }
+      slot[name="trailing"] {
+        align-self: var(--_list-item-button-trailing-align-self, auto);
+      }
+    `,
+  ];
+
+  /** @private */ @query(".focus-ring") private readonly _focusRing?: M3eFocusRingElement;
+  /** @private */ @query(".state-layer") private readonly _stateLayer?: M3eStateLayerElement;
+  /** @private */ @query(".ripple") private readonly _ripple?: M3eRippleElement;
+
+  constructor() {
+    super();
+    new FocusController(this, {
+      callback: (_, focusVisible) =>
+        this.shadowRoot?.querySelector(".base")?.classList.toggle("focus-visible", focusVisible),
+    });
+    new PressedController(this, {
+      callback: (pressed) => this.shadowRoot?.querySelector(".base")?.classList.toggle("pressed", pressed),
+    });
+    new HoverController(this, {
+      callback: (hovering) => this.shadowRoot?.querySelector(".base")?.classList.toggle("hover", hovering),
+    });
+  }
+
+  /** @inheritdoc */
+  protected override firstUpdated(_changedProperties: PropertyValues<this>): void {
+    super.firstUpdated(_changedProperties);
+    [this._focusRing, this._stateLayer, this._ripple].forEach((x) => x?.attach(this));
+  }
+
+  /** @inheritdoc */
+  protected override render(): unknown {
+    return html`<div class="base">
+      <m3e-state-layer class="state-layer" ?disabled="${this.disabled}"> </m3e-state-layer>
+      <m3e-focus-ring class="focus-ring" inward ?disabled="${this.disabled}"></m3e-focus-ring>
+      <m3e-ripple class="ripple" ?disabled="${this.disabled}"></m3e-ripple>
+      ${this[renderPseudoLink]()} ${super._renderBase()}
+    </div>`;
+  }
+}

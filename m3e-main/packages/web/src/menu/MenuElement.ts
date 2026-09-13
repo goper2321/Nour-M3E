@@ -1,0 +1,680 @@
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
+import { css, CSSResultGroup, html, LitElement, PropertyValues, unsafeCSS } from "lit";
+import { property } from "lit/decorators.js";
+
+import {
+  DesignToken,
+  ScrollController,
+  Role,
+  AttachInternals,
+  addCustomState,
+  setCustomState,
+  deleteCustomState,
+  customElement,
+  SuppressInitialAnimation,
+  registerStyleSheet,
+  ClickOutsideController,
+  setCustomEnumState,
+} from "@m3e/web/core";
+
+import { RovingTabIndexManager } from "@m3e/web/core/a11y";
+import { positionAnchor } from "@m3e/web/core/anchoring";
+import { Direction, M3eDirectionality } from "@m3e/web/core/bidi";
+
+import { M3eMenuItemElement } from "./MenuItemElement";
+import { isMenuPositionX, MenuPositionX, MenuPositionY } from "./MenuPosition";
+import { MenuItemElementBase } from "./MenuItemElementBase";
+import { isMenuVariant, MenuVariant } from "./MenuVariant";
+
+/**
+ * Presents a list of choices on a temporary surface.
+ *
+ * @description
+ * The `m3e-menu` component presents a list of choices on a temporary surface, typically anchored to a trigger element.
+ * It supports dynamic positioning via `position-x` and `position-y` attributes, and renders its contents through the default slot.
+ *
+ * @example
+ * The following example illustrates a basic menu.  The `m3e-menu-trigger` is used to trigger a `m3e-menu` specified
+ * by the `for` attribute when its parenting element is activated.
+ * ```html
+ * <m3e-button>
+ *   <m3e-menu-trigger for="menu1">Basic menu</m3e-menu-trigger>
+ * </m3e-button>
+ * <m3e-menu id="menu1">
+ *   <m3e-menu-item>Apple</m3e-menu-item>
+ *   <m3e-menu-item>Apricot</m3e-menu-item>
+ *   <m3e-menu-item>Avocado</m3e-menu-item>
+ *   <m3e-menu-item>Green Apple</m3e-menu-item>
+ *   <m3e-menu-item>Green Grapes</m3e-menu-item>
+ *   <m3e-menu-item>Olive</m3e-menu-item>
+ *   <m3e-menu-item>Orange</m3e-menu-item>
+ * </m3e-menu>
+ * ```
+ *
+ * @example
+ * The next example illustrates nested menus.  Submenus are triggered by placing a `m3e-menu-trigger` inside a `m3e-menu-item`.
+ * ```html
+ * <m3e-button>
+ *   <m3e-menu-trigger for="menu2">Nested menus</m3e-menu-trigger>
+ * </m3e-button>
+ * <m3e-menu id="menu2">
+ *   <m3e-menu-item>
+ *     <m3e-menu-trigger for="menu3">Fruits with A</m3e-menu-trigger>
+ *   </m3e-menu-item>
+ *   <m3e-menu-item>Grapes</m3e-menu-item>
+ *   <m3e-menu-item>Olive</m3e-menu-item>
+ *   <m3e-menu-item>Orange</m3e-menu-item>
+ * </m3e-menu>
+ * <m3e-menu id="menu3">
+ *   <m3e-menu-item>Apricot</m3e-menu-item>
+ *   <m3e-menu-item>Avocado</m3e-menu-item>
+ *   <m3e-menu-item>
+ *     <m3e-menu-trigger for="menu4">Apples</m3e-menu-trigger>
+ *   </m3e-menu-item>
+ * </m3e-menu>
+ * <m3e-menu id="menu4">
+ *   <m3e-menu-item>Fuji</m3e-menu-item>
+ *   <m3e-menu-item>Granny Smith</m3e-menu-item>
+ *   <m3e-menu-item>Red Delicious</m3e-menu-item>
+ * </m3e-menu>
+ * ```
+ *
+ * @tag m3e-menu
+ *
+ * @slot - Renders the contents of the menu.
+ *
+ * @attr position-x - The position of the menu, on the x-axis.
+ * @attr position-y - The position of the menu, on the y-axis.
+ * @attr variant - The appearance variant of the menu.
+ *
+ * @fires beforetoggle - Dispatched before the toggle state changes.
+ * @fires toggle - Dispatched after the toggle state has changed.
+ *
+ * @cssprop --m3e-menu-container-shape - Controls the corner radius of the menu container.
+ * @cssprop --m3e-menu-active-container-shape - Controls the corner radius of the menu container when active.
+ * @cssprop --m3e-menu-container-min-width - Minimum width of the menu container.
+ * @cssprop --m3e-menu-container-max-width - Maximum width of the menu container.
+ * @cssprop --m3e-menu-container-max-height - Maximum height of the menu container.
+ * @cssprop --m3e-menu-container-padding-block - Vertical padding inside the menu container.
+ * @cssprop --m3e-menu-container-padding-inline - Horizontal padding inside the menu container.
+ * @cssprop --m3e-menu-container-color - Background color of the menu container.
+ * @cssprop --m3e-menu-container-elevation - Box shadow elevation of the menu container.
+ * @cssprop --m3e-vibrant-menu-container-color - Background color of the menu container for vibrant variant.
+ * @cssprop --m3e-menu-divider-spacing - Vertical spacing around slotted `m3e-divider` elements.
+ * @cssprop --m3e-menu-gap - Gap between content in the menu.
+ */
+@customElement("m3e-menu")
+export class M3eMenuElement extends SuppressInitialAnimation(AttachInternals(Role(LitElement, "menu"))) {
+  static {
+    registerStyleSheet(css`
+      m3e-menu > m3e-divider {
+        margin-block: var(--m3e-menu-divider-spacing, ${DesignToken.measurement.space100});
+      }
+    `);
+  }
+
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = css`
+    :host {
+      position: absolute;
+      padding: unset;
+      margin: unset;
+      border: unset;
+      overflow-y: auto;
+      overflow-x: visible;
+      scrollbar-width: ${DesignToken.scrollbar.thinWidth};
+      scrollbar-color: ${DesignToken.scrollbar.color};
+      scroll-padding-block: calc(
+        var(--m3e-focus-ring-thickness, 3px) +
+          var(--m3e-menu-container-padding-block, ${DesignToken.measurement.space50})
+      );
+      min-width: var(--m3e-menu-container-min-width, 112px);
+      max-width: var(--m3e-menu-container-max-width, 280px);
+      max-height: var(--m3e-menu-container-max-height, 280px);
+      box-shadow: var(--m3e-menu-container-elevation, ${DesignToken.elevation.level3});
+      opacity: 0;
+      display: none;
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    .base {
+      contain: layout style paint;
+      display: flex;
+      flex-direction: column;
+      row-gap: var(--m3e-menu-gap, ${DesignToken.measurement.space25});
+      min-width: inherit;
+      max-width: inherit;
+      line-height: 0;
+      padding-block: var(--m3e-menu-container-padding-block, ${DesignToken.measurement.space50});
+      padding-inline: var(--m3e-menu-container-padding-inline, ${DesignToken.measurement.space50});
+      --m3e-focus-ring-outward-offset: 0px;
+      --m3e-focus-ring-growth-factor: 1.5;
+    }
+    :host(:not(:is(:state(--active), :--active))) {
+      border-radius: var(--m3e-menu-container-shape, ${DesignToken.shape.corner.small});
+    }
+    :host(:not(:is(:state(--active), :--active))) .base {
+      --m3e-menu-item-first-child-shape: ${DesignToken.shape.corner.extraSmall};
+      --m3e-menu-item-last-child-shape: ${DesignToken.shape.corner.extraSmall};
+    }
+    :host(:is(:state(--active), :--active)) {
+      border-radius: var(--m3e-menu-active-container-shape, ${DesignToken.shape.corner.large});
+    }
+    :host(:not(:is(:state(--no-animate), :--no-animate))) {
+      transition: ${unsafeCSS(
+        `opacity ${DesignToken.motion.duration.short2} ${DesignToken.motion.easing.standard}, 
+        transform ${DesignToken.motion.duration.short2} ${DesignToken.motion.easing.standard},
+        overlay ${DesignToken.motion.duration.short2} ${DesignToken.motion.easing.standard} allow-discrete,
+        display ${DesignToken.motion.duration.short2} ${DesignToken.motion.easing.standard} allow-discrete,
+        border-radius ${DesignToken.motion.spring.fastEffects}`,
+      )};
+    }
+    :host(:not([submenu])) {
+      transform: scaleY(0.8);
+    }
+    :host(:not([submenu]):popover-open) {
+      transform: scaleY(1);
+      animation: ${unsafeCSS(
+        `bounce-open ${DesignToken.motion.duration.medium1} ${DesignToken.motion.easing.standard}`,
+      )};
+    }
+    @keyframes bounce-open {
+      0% {
+        transform: scaleY(0.8);
+      }
+      70% {
+        transform: scaleY(1.02);
+      }
+      100% {
+        transform: scaleY(1);
+      }
+    }
+    :host::backdrop {
+      background-color: transparent;
+    }
+    :host(:popover-open) {
+      display: block;
+      opacity: 1;
+    }
+    :host(:is(:state(--bottom), :--bottom)) {
+      transform-origin: top;
+    }
+    :host(:is(:state(--top), :--top)) {
+      transform-origin: bottom;
+    }
+    :host(:is(:state(--shift-down), :--shift-down)) {
+      margin-top: calc(0px - var(--m3e-menu-container-padding-block, ${DesignToken.measurement.space50}));
+    }
+    :host(:is(:state(--shift-up), :--shift-up)) {
+      margin-top: var(--m3e-menu-container-padding-block, ${DesignToken.measurement.space50});
+    }
+    :host(:is(:state(--vibrant), :--vibrant)) {
+      background-color: var(--m3e-vibrant-menu-container-color, ${DesignToken.color.tertiaryContainer});
+      --m3e-menu-item-color: var(--m3e-vibrant-menu-item-color, ${DesignToken.color.onTertiaryContainer});
+      --m3e-menu-item-container-hover-color: var(
+        --m3e-vibrant-menu-item-container-hover-color,
+        ${DesignToken.color.onTertiaryContainer}
+      );
+      --m3e-menu-item-container-focus-color: var(
+        --m3e-vibrant-menu-item-container-focus-color,
+        ${DesignToken.color.onTertiaryContainer}
+      );
+      --m3e-menu-item-ripple-color: var(--m3e-vibrant-menu-item-ripple-color, ${DesignToken.color.onTertiaryContainer});
+      --m3e-menu-item-active-state-layer-color: var(
+        --m3e-vibrant-menu-item-active-state-layer-color,
+        ${DesignToken.color.onTertiaryContainer}
+      );
+      --m3e-menu-item-selected-color: var(--m3e-vibrant-menu-item-selected-color, ${DesignToken.color.onTertiary});
+      --m3e-menu-item-selected-container-color: var(
+        --m3e-vibrant-menu-item-selected-container-color,
+        ${DesignToken.color.tertiary}
+      );
+      --m3e-menu-item-selected-container-hover-color: var(
+        --m3e-vibrant-menu-item-selected-container-hover-color,
+        ${DesignToken.color.onTertiary}
+      );
+      --m3e-menu-item-container-selected-focus-color: var(
+        --m3e-vibrant-menu-item-selected-container-focus-color,
+        ${DesignToken.color.onTertiary}
+      );
+      --m3e-menu-item-selected-ripple-color: var(
+        --m3e-vibrant-menu-item-selected-ripple-color,
+        ${DesignToken.color.onTertiary}
+      );
+      --m3e-menu-item-disabled-color: var(
+        --m3e-vibrant-menu-item-disabled-color,
+        ${DesignToken.color.onTertiaryContainer}
+      );
+    }
+    :host(:is(:state(--standard), :--standard)) {
+      background-color: var(--m3e-menu-container-color, ${DesignToken.color.surfaceContainer});
+    }
+    @starting-style {
+      :host(:popover-open) {
+        opacity: 0;
+      }
+    }
+    @media (prefers-reduced-motion) {
+      :host(:not(:is(:state(--no-animate), :--no-animate))) {
+        transition: none;
+      }
+    }
+    @media (forced-colors: active) {
+      :host {
+        background-color: Menu;
+        color: MenuText;
+        outline: 1px solid MenuText;
+      }
+    }
+  `;
+
+  /** @private */ static __activeMenu?: M3eMenuElement;
+
+  /** @private */ #trigger?: HTMLElement;
+  /** @private */ #anchorCleanup?: () => void;
+  /** @private */ #anchorLastPosition?: { x: number; y: number; dir: Direction };
+
+  /** @private */ readonly #listManager = new RovingTabIndexManager<MenuItemElementBase>()
+    .withWrap()
+    .withHomeAndEnd()
+    .withVerticalOrientation();
+
+  /** @private */ readonly #keyDownHandler = (e: KeyboardEvent) => this.#handleKeyDown(e);
+  /** @private */ readonly #mouseEnterHandler = () => this.#handleMouseEnter();
+
+  /** @private */ readonly #scrollController = new ScrollController(this, {
+    target: null,
+    callback: (target) =>
+      target instanceof M3eMenuElement
+        ? target.items.filter((x) => x instanceof M3eMenuItemElement).forEach((x) => x.submenu?.hide())
+        : this.hideAll(),
+  });
+
+  /** @private */ readonly #clickOutsideController = new ClickOutsideController(this, {
+    target: null,
+    callback: (composedPath) => {
+      // If the menu isn't a submenu and no submenu is being clicked, close the entire menu
+      if (!this.submenu && !composedPath.some((x) => x instanceof M3eMenuElement)) {
+        this.hide();
+      }
+    },
+  });
+
+  /** @private */ readonly #toggleHandler = (e: ToggleEvent) => {
+    switch (e.newState) {
+      case "open":
+        this.#clickOutsideController.observe(this);
+        if (this.#trigger) {
+          this.#clickOutsideController.observe(this.#trigger);
+        }
+        setTimeout(() => this.#listManager.setActiveItem(this.#listManager.items.find((x) => !x.disabled)), 40);
+        break;
+
+      case "closed":
+        this.#clickOutsideController.unobserveAll();
+        this.#anchorCleanup?.();
+        this.#anchorCleanup = undefined;
+        this.#anchorLastPosition = undefined;
+        break;
+    }
+  };
+
+  /**
+   * The position of the menu, on the x-axis.
+   * @default "after"
+   */
+  @property({ attribute: "position-x" }) positionX: MenuPositionX = "after";
+
+  /**
+   * The position of the menu, on the y-axis.
+   * @default "below"
+   */
+  @property({ attribute: "position-y" }) positionY: MenuPositionY = "below";
+
+  /**
+   * The appearance variant of the menu.
+   * @default "standard"
+   */
+  @property({ reflect: true, useDefault: true }) variant: MenuVariant = "standard";
+
+  /** The items of the menu. */
+  get items(): ReadonlyArray<MenuItemElementBase> {
+    return this.#listManager.items;
+  }
+
+  /** Whether the menu is open. */
+  get isOpen() {
+    return this.#trigger !== undefined;
+  }
+
+  /** Whether the menu is a submenu. */
+  @property({ type: Boolean, reflect: true }) submenu = false;
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    super.connectedCallback();
+
+    this.#applyVariant();
+    this.#applyPosition();
+
+    this.tabIndex = -1;
+    this.setAttribute("popover", "manual");
+    this.addEventListener("keydown", this.#keyDownHandler);
+    this.addEventListener("mouseenter", this.#mouseEnterHandler);
+    this.addEventListener("toggle", this.#toggleHandler);
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    this.removeEventListener("keydown", this.#keyDownHandler);
+    this.removeEventListener("mouseenter", this.#mouseEnterHandler);
+    this.removeEventListener("toggle", this.#toggleHandler);
+
+    this.#deactivate();
+  }
+
+  /**
+   * Opens the menu.
+   * @param {HTMLElement} trigger The element that triggered the menu.
+   * @returns {Promise<void>} A `Promise` that resolves when the menu is opened.
+   */
+  async show(trigger: HTMLElement): Promise<void> {
+    if (this.#trigger && this.#trigger !== trigger) {
+      this.hide();
+    }
+
+    let positionX = this.positionX;
+    if (M3eDirectionality.current === "rtl") {
+      positionX = positionX === "before" ? "after" : "before";
+    }
+
+    this.#anchorCleanup = await positionAnchor(
+      this,
+      trigger,
+      {
+        position: this.submenu
+          ? positionX === "before"
+            ? "left-start"
+            : "right-start"
+          : this.positionY === "above"
+            ? positionX === "before"
+              ? "top-end"
+              : "top-start"
+            : positionX === "before"
+              ? "bottom-end"
+              : "bottom-start",
+        inline: true,
+        flip: true,
+        shift: "main",
+        offset: !this.submenu ? 4 : undefined,
+      },
+      (x, y, position) => {
+        if (!this.submenu) {
+          setCustomState(this, "--top", position.includes("top"));
+          setCustomState(this, "--bottom", position.includes("bottom"));
+        } else if (this.#trigger) {
+          const top = this.#getAbsolutePosition(this.#trigger).y;
+          setCustomState(this, "--shift-down", false);
+          setCustomState(this, "--shift-up", false);
+          setCustomState(this, Math.round(y) === Math.round(top) ? "--shift-down" : "--shift-up", true);
+        }
+
+        if (this.#anchorLastPosition?.dir !== M3eDirectionality.current || this.#anchorLastPosition?.x !== x) {
+          if (M3eDirectionality.current === "rtl") {
+            this.style.right = `${window.innerWidth - x - this.clientWidth}px`;
+          } else {
+            this.style.left = `${x}px`;
+          }
+        }
+
+        if (this.#anchorLastPosition?.y !== y) {
+          this.style.top = `${y}px`;
+        }
+
+        this.#anchorLastPosition = { x, y, dir: M3eDirectionality.current };
+      },
+    );
+
+    const parent = trigger.closest("m3e-menu");
+    if (parent) {
+      this.variant = parent.variant;
+    } else {
+      this._activate();
+    }
+
+    this.showPopover();
+
+    this.#trigger = trigger;
+    this.#trigger.ariaExpanded = "true";
+    this.#scrollController.observe(this.#trigger);
+  }
+
+  /**
+   * Hides the menu.
+   * @param {boolean} [restoreFocus=false] Whether to restore focus to the menu's trigger.
+   */
+  hide(restoreFocus: boolean = false): void {
+    for (const item of this.#listManager.items) {
+      const submenu = (<M3eMenuItemElement>item).submenu;
+      if (submenu && submenu.isOpen) {
+        submenu.hide();
+      }
+    }
+
+    this.#deactivate();
+    this.hidePopover();
+
+    if (this.#trigger) {
+      this.#trigger.ariaExpanded = "false";
+      if (restoreFocus) {
+        this.#trigger.focus();
+      }
+      this.#scrollController.unobserve(this.#trigger);
+      this.#trigger = undefined;
+    }
+  }
+
+  /**
+   * Closes this menu and any parenting menus.
+   * @param {boolean} [restoreFocus=false] Whether to restore focus to the menu's trigger.
+   */
+  hideAll(restoreFocus: boolean = false): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let menu: M3eMenuElement = this;
+    while (menu.#trigger) {
+      const parent = menu.#trigger.closest("m3e-menu");
+      if (!parent) {
+        break;
+      }
+      menu = parent;
+    }
+    menu.hide(restoreFocus);
+  }
+
+  /**
+   * Toggles the menu.
+   * @param {HTMLElement} trigger The element that triggered the menu.
+   * @returns {Promise<void>} A `Promise` that resolves when the menu is opened or closed.
+   */
+  async toggle(trigger: HTMLElement): Promise<void> {
+    if (this.#trigger) {
+      this.hide();
+    } else {
+      await this.show(trigger);
+    }
+  }
+
+  /** @inheritdoc */
+  protected override willUpdate(_changedProperties: PropertyValues<this>): void {
+    super.willUpdate(_changedProperties);
+
+    if (_changedProperties.has("variant")) {
+      this.#applyVariant();
+    }
+    if (_changedProperties.has("positionX") || _changedProperties.has("positionY")) {
+      this.#applyPosition();
+    }
+  }
+
+  /** @inheritdoc */
+  protected override render(): unknown {
+    return html`<div class="base"><slot @slotchange=${this.#handleSlotChange}></slot></div>`;
+  }
+
+  /** @private */
+  #applyVariant(): void {
+    if (!isMenuVariant(this.variant)) {
+      this.variant = "standard";
+    }
+    setCustomEnumState(this, this.variant, "standard", "vibrant");
+  }
+
+  /** @private */
+  #applyPosition(): void {
+    if (!isMenuPositionX(this.positionX)) {
+      this.positionX = "after";
+    }
+    if (!isMenuPositionX(this.positionY)) {
+      this.positionY = "below";
+    }
+  }
+
+  /** @private */
+  #handleSlotChange(): void {
+    const { added } = this.#listManager.setItems(
+      [
+        ...this.querySelectorAll<MenuItemElementBase>("m3e-menu-item,m3e-menu-item-checkbox,m3e-menu-item-radio"),
+      ].filter((x) => x.closest("m3e-menu") === this),
+    );
+
+    if (!this.#listManager.activeItem) {
+      this.#listManager.updateActiveItem(added.find((x) => !x.disabled));
+    }
+
+    this.#listManager.items.forEach((x, i) => {
+      setCustomState(x, "--first", i === 0 && !x.previousElementSibling);
+      setCustomState(x, "--last", i === this.#listManager.items.length - 1);
+    });
+  }
+
+  /** @private */
+  #handleKeyDown(e: KeyboardEvent): void {
+    switch (e.key) {
+      case "Right":
+      case "ArrowRight":
+        if (M3eDirectionality.current === "rtl") {
+          e.preventDefault();
+          this.hide(true);
+        } else {
+          this.#listManager.onKeyDown(e);
+        }
+
+        break;
+      case "Left":
+      case "ArrowLeft":
+        if (M3eDirectionality.current === "ltr") {
+          e.preventDefault();
+          this.hide(true);
+        } else {
+          this.#listManager.onKeyDown(e);
+        }
+
+        break;
+
+      case "Tab":
+        this.hideAll();
+        break;
+
+      case "Escape":
+        if (!e.shiftKey && !e.ctrlKey) {
+          this.hide(true);
+        }
+        break;
+
+      default:
+        this.#listManager.onKeyDown(e);
+        break;
+    }
+  }
+
+  /** @private */
+  #handleMouseEnter(): void {
+    this._activate();
+  }
+
+  /** @private */
+  #getAbsolutePosition(element: HTMLElement): { x: number; y: number } {
+    let x = 0,
+      y = 0;
+
+    for (
+      let current: HTMLElement | null = element;
+      current;
+      current = current.offsetParent instanceof HTMLElement ? current.offsetParent : null
+    ) {
+      x += current.offsetLeft - current.scrollLeft + current.clientLeft;
+      y += current.offsetTop - current.scrollTop + current.clientTop;
+    }
+
+    return { x, y };
+  }
+
+  /** @internal */
+  _activate(): void {
+    if (this !== M3eMenuElement.__activeMenu) {
+      if (M3eMenuElement.__activeMenu) {
+        deleteCustomState(M3eMenuElement.__activeMenu, "--active");
+      }
+      M3eMenuElement.__activeMenu = this;
+      addCustomState(M3eMenuElement.__activeMenu, "--active");
+    }
+  }
+
+  /** @private */
+  #deactivate(): void {
+    if (this === M3eMenuElement.__activeMenu) {
+      deleteCustomState(M3eMenuElement.__activeMenu, "--active");
+      M3eMenuElement.__activeMenu = undefined;
+    }
+  }
+}
+
+interface M3eMenuElementEventMap extends HTMLElementEventMap {
+  beforetoggle: ToggleEvent;
+  toggle: ToggleEvent;
+}
+
+export interface M3eMenuElement {
+  addEventListener<K extends keyof M3eMenuElementEventMap>(
+    type: K,
+    listener: (this: M3eMenuElement, ev: M3eMenuElementEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+
+  removeEventListener<K extends keyof M3eMenuElementEventMap>(
+    type: K,
+    listener: (this: M3eMenuElement, ev: M3eMenuElementEventMap[K]) => void,
+    options?: boolean | EventListenerOptions,
+  ): void;
+
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ): void;
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-menu": M3eMenuElement;
+  }
+}

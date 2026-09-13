@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>M3E</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="M3E" />
+    <base href="./" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0"
+      rel="stylesheet"
+    />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@m3e/web@2.7.12/dist/all.min.js"></script>
+    <script type="module" src="index.js"></script>
+    <link href="index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <m3e-theme strong-focus>
+      <m3e-app-bar class="docs-header-bar">
+        <m3e-icon-button slot="leading" aria-label="Menu" toggle>
+          <m3e-icon name="menu"></m3e-icon>
+          <m3e-icon slot="selected" name="menu_open"></m3e-icon>
+          <m3e-drawer-toggle for="nav-drawer"></m3e-drawer-toggle>
+        </m3e-icon-button>
+        <span slot="title" class="title">
+          <span class="title-text">M3E — Material 3 Expressive for Every Framework</span>
+          <m3e-chip class="title-version">v2.7.12</m3e-chip>
+        </span>
+        <span slot="trailing">
+          <m3e-icon-button id="npm-button" href="https://www.npmjs.com/package/@m3e/web" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="currentColor">
+              <!--!Font Awesome Free v7.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+              <path
+                d="M288 288l-32 0 0-64 32 0 0 64zM576 160l0 192-288 0 0 32-128 0 0-32-160 0 0-192 576 0zM160 192l-128 0 0 128 64 0 0-96 32 0 0 96 32 0 0-128zm160 0l-128 0 0 160 64 0 0-32 64 0 0-128zm224 0l-192 0 0 128 64 0 0-96 32 0 0 96 32 0 0-96 32 0 0 96 32 0 0-128z"
+              />
+            </svg>
+          </m3e-icon-button>
+          <m3e-tooltip for="npm-button">npm package</m3e-tooltip>
+          <m3e-icon-button id="github-button" aria-label="Git" href="https://github.com/matraic/m3e" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
+              <!--!Font Awesome Free v7.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+              <path
+                d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5l0 52C323 491.5 335.5 500 350.5 494 441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5l0-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21z"
+              />
+            </svg>
+          </m3e-icon-button>
+          <m3e-tooltip for="github-button">Github repository</m3e-tooltip>
+          <m3e-icon-button id="settings-button" aria-label="Settings" toggle>
+            <m3e-icon name="settings"></m3e-icon>
+            <m3e-drawer-toggle for="settings-drawer"></m3e-drawer-toggle>
+          </m3e-icon-button>
+          <m3e-tooltip for="settings-button">Settings</m3e-tooltip>
+        </span>
+      </m3e-app-bar>
+      <m3e-drawer-container class="docs-drawer-container" start start-mode="auto" end-mode="auto">
+        <m3e-nav-menu id="nav-drawer" slot="start">
+          <m3e-nav-menu-item open>
+            <m3e-icon slot="icon" name="rocket_launch"></m3e-icon>
+            <span slot="label">Getting Started</span>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="near_me"></m3e-icon>
+              <a slot="label" target="content-frame" href="getting-started/overview.html">Overview</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="package_2"></m3e-icon>
+              <a slot="label" target="content-frame" href="getting-started/installation.html">Installation</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="language"></m3e-icon>
+              <a slot="label" target="content-frame" href="getting-started/browser-support.html">Browser Support</a>
+            </m3e-nav-menu-item>
+          </m3e-nav-menu-item>
+          <m3e-nav-menu-item>
+            <m3e-icon slot="icon" name="palette"></m3e-icon>
+            <span slot="label">Styles</span>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="colorize"></m3e-icon>
+              <a slot="label" target="content-frame" href="styles/color.html">Color</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="density_medium"></m3e-icon>
+              <a slot="label" target="content-frame" href="styles/density.html">Density</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="animation"></m3e-icon>
+              <a slot="label" target="content-frame" href="styles/motion.html">Motion</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <m3e-icon slot="icon" name="text_fields"></m3e-icon>
+              <a slot="label" target="content-frame" href="styles/typography.html">Typography</a>
+            </m3e-nav-menu-item>
+          </m3e-nav-menu-item>
+          <m3e-nav-menu-item>
+            <m3e-icon slot="icon" name="integration_instructions"></m3e-icon>
+            <span slot="label">Frameworks</span>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="frameworks/react.html">React</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="frameworks/vue.html">Vue</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="frameworks/angular.html">Angular</a>
+            </m3e-nav-menu-item>
+          </m3e-nav-menu-item>
+          <m3e-nav-menu-item open>
+            <m3e-icon slot="icon" name="widgets"></m3e-icon>
+            <span slot="label">Components</span>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/app-bar.html">App Bar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/autocomplete.html">Autocomplete</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/avatar.html">Avatar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/badge.html">Badge</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/bottom-sheet.html">Bottom Sheet</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/breadcrumb.html">Breadcrumb</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/button.html">Button</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/button-group.html">Button Group</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/calendar.html">Calendar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/card.html">Card</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/checkbox.html">Checkbox</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/chips.html">Chips</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/content-pane.html">Content Pane</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/date-input.html">Date Input</a>
+              <m3e-badge slot="badge">New</m3e-badge>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/datepicker.html">Datepicker</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/dialog.html">Dialog</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/divider.html">Divider</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/drawer-container.html">Drawer Container</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/expansion-panel.html">Expansion Panel</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/fab.html">FAB</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/fab-menu.html">FAB Menu</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/form-field.html">Form Field</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/heading.html">Heading</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/icon.html">Icon</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/icon-button.html">Icon Button</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/list.html">List</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/loading-indicator.html">Loading Indicator</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/menu.html">Menu</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/nav-bar.html">Nav Bar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/nav-menu.html">Nav Menu</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/nav-rail.html">Nav Rail</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/paginator.html">Paginator</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/progress-indicator.html">Progress Indicator</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/radio-group.html">Radio Group</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/search.html">Search</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/segmented-button.html">Segmented Button</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/select.html">Select</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/shape.html">Shape</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/skeleton.html">Skeleton</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/slide-group.html">Slide Group</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/slider.html">Slider</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/snackbar.html">Snackbar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/split-button.html">Split Button</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/split-pane.html">Split Pane</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/stepper.html">Stepper</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/switch.html">Switch</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/tabs.html">Tabs</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/textarea-autosize.html">Textarea Autosize</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/theme.html">Theme</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/timepicker.html">Timepicker</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/toc.html">TOC</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/toolbar.html">Toolbar</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/tooltip.html">Tooltip</a>
+            </m3e-nav-menu-item>
+            <m3e-nav-menu-item>
+              <a slot="label" target="content-frame" href="components/tree.html">Tree</a>
+            </m3e-nav-menu-item>
+          </m3e-nav-menu-item>
+        </m3e-nav-menu>
+        <main>
+          <iframe id="content-frame" class="docs-frame" title="Main content" name="content-frame" hidden></iframe>
+        </main>
+        <div id="settings-drawer" role="complementary" slot="end">
+          <m3e-heading id="color-header" variant="label" size="large">Color</m3e-heading>
+          <input id="color" type="color" aria-labelledby="color-header" />
+          <m3e-heading id="color-scheme-header" variant="label" size="large">Color scheme</m3e-heading>
+          <m3e-segmented-button id="color-scheme-button" aria-labelledby="color-scheme-header">
+            <m3e-button-segment value="light">
+              <m3e-icon slot="icon" name="light_mode"></m3e-icon>
+              Light
+            </m3e-button-segment>
+            <m3e-button-segment checked value="auto">
+              <m3e-icon slot="icon" name="settings_brightness"></m3e-icon>
+              System
+            </m3e-button-segment>
+            <m3e-button-segment value="dark">
+              <m3e-icon slot="icon" name="dark_mode"></m3e-icon>
+              Dark
+            </m3e-button-segment>
+          </m3e-segmented-button>
+          <m3e-heading id="contrast-header" variant="label" size="large">Contrast</m3e-heading>
+          <m3e-segmented-button id="contrast-button" aria-labelledby="contrast-header">
+            <m3e-button-segment checked value="default">Default</m3e-button-segment>
+            <m3e-button-segment value="medium">Medium</m3e-button-segment>
+            <m3e-button-segment value="high">High</m3e-button-segment>
+          </m3e-segmented-button>
+          <m3e-heading id="directionality-header" variant="label" size="large">Directionality</m3e-heading>
+          <m3e-segmented-button id="directionality-button" aria-labelledby="directionality-header">
+            <m3e-button-segment checked value="ltr">
+              <m3e-icon slot="icon" name="format_textdirection_l_to_r"></m3e-icon>
+              Left to right
+            </m3e-button-segment>
+            <m3e-button-segment value="rtl">
+              <m3e-icon slot="icon" name="format_textdirection_r_to_l"></m3e-icon>
+              Right to left
+            </m3e-button-segment>
+          </m3e-segmented-button>
+          <m3e-heading id="text-size-header" variant="label" size="large">Text size</m3e-heading>
+          <m3e-segmented-button id="text-size-button" aria-labelledby="text-size-header">
+            <m3e-button-segment checked value="16px"> 100% </m3e-button-segment>
+            <m3e-button-segment checked value="24px"> 150% </m3e-button-segment>
+            <m3e-button-segment checked value="32px"> 200% </m3e-button-segment>
+          </m3e-segmented-button>
+        </div>
+      </m3e-drawer-container>
+    </m3e-theme>
+  </body>
+</html>

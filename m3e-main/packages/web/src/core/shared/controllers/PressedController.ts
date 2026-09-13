@@ -1,0 +1,214 @@
+import { ReactiveControllerHost } from "lit";
+
+import { MonitorControllerBase, MonitorControllerOptions } from "./MonitorControllerBase";
+
+/** The callback function invoked when the pressed state of an element changes. */
+export type PressedControllerCallback = (
+  pressed: boolean,
+  point: { x: number; y: number },
+  target: HTMLElement,
+) => void;
+
+/** The callback function invoked to test whether an event should trigger a change to pressed state. */
+export type PressedControllerFilterCallback = (e: Event) => boolean;
+
+/** Encapsulates options used to configure a `PressedController`. */
+export interface PressedControllerOptions extends MonitorControllerOptions {
+  /** The callback invoked when the pressed state of an element changes. */
+  callback: PressedControllerCallback;
+
+  /** The callback function invoked to test whether an event should trigger a change to pressed state. */
+  filter?: PressedControllerFilterCallback;
+
+  /** The minimum amount of time, in milliseconds, to retain a pressed state. */
+  minPressedDuration?: number;
+
+  /** Whether events are captured. */
+  capture?: boolean;
+
+  /**
+   * A function used to determine whether a given keyboard key toggles the pressed state.
+   * @param key The `KeyboardEvent.key` to test.
+   * @returns Whether `key` toggles the pressed state.
+   */
+  isPressedKey?: (key: string) => boolean;
+}
+
+/** A `ReactiveController` used to monitor the pressed state of one or more elements. */
+export class PressedController extends MonitorControllerBase {
+  /** @private */ readonly #capture?: boolean;
+  /** @private */ readonly #callback: PressedControllerCallback;
+  /** @private */ readonly #filter?: PressedControllerFilterCallback;
+  /** @private */ readonly #isPressedKey?: (key: string) => boolean;
+  /** @private */ readonly #pressedTargets = new Map<HTMLElement, number>();
+  /** @private */ readonly #releaseTimeouts = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+  /** @private */ readonly #minPressedDuration: number;
+
+  /** @private */ readonly #pointerDownHandler = (e: PointerEvent) => this.#handlePointerDown(e);
+  /** @private */ readonly #pointerUpHandler = (e: PointerEvent) => this.#handlePointerUp(e);
+  /** @private */ readonly #touchEndHandler = (e: TouchEvent) => this.#handleTouchEnd(e);
+  /** @private */ readonly #keyDownHandler = (e: KeyboardEvent) => this.#handleKeyDown(e);
+  /** @private */ readonly #keyUpHandler = (e: KeyboardEvent) => this.#handleKeyUp(e);
+
+  /**
+   * Initializes a new instance of this class.
+   * @param {ReactiveControllerHost & HTMLElement} host The host element to which this controller will be added.
+   * @param {PressedControllerOptions} options Options used to configure this controller.
+   */
+  constructor(host: ReactiveControllerHost & HTMLElement, options: PressedControllerOptions) {
+    super(host, options);
+
+    this.#capture = options.capture;
+    this.#callback = options.callback;
+    this.#filter = options.filter;
+    this.#isPressedKey = options.isPressedKey;
+    this.#minPressedDuration = options.minPressedDuration ?? 0;
+  }
+
+  /** @inheritdoc */
+  override hostConnected(): void {
+    document.addEventListener("pointerup", this.#pointerUpHandler, { capture: this.#capture });
+    document.addEventListener("touchend", this.#touchEndHandler, { capture: this.#capture });
+    document.addEventListener("touchcancel", this.#touchEndHandler, { capture: this.#capture });
+
+    super.hostConnected();
+  }
+
+  /** @inheritdoc */
+  override hostDisconnected(): void {
+    document.removeEventListener("pointerup", this.#pointerUpHandler, { capture: this.#capture });
+    document.removeEventListener("touchend", this.#touchEndHandler, { capture: this.#capture });
+    document.removeEventListener("touchcancel", this.#touchEndHandler, { capture: this.#capture });
+
+    super.hostDisconnected();
+    for (const id of this.#releaseTimeouts.values()) {
+      clearTimeout(id);
+    }
+    this.#releaseTimeouts.clear();
+    this.#pressedTargets.clear();
+  }
+
+  /** @inheritdoc */
+  protected override _observe(target: HTMLElement): void {
+    target.addEventListener("pointerdown", this.#pointerDownHandler, { capture: this.#capture });
+
+    if (this.#isPressedKey) {
+      target.addEventListener("keydown", this.#keyDownHandler, { capture: this.#capture });
+      target.addEventListener("keyup", this.#keyUpHandler, { capture: this.#capture });
+    }
+  }
+
+  /** @inheritdoc */
+  protected override _unobserve(target: HTMLElement): void {
+    target.removeEventListener("pointerdown", this.#pointerDownHandler, { capture: this.#capture });
+
+    if (this.#isPressedKey) {
+      target.removeEventListener("keydown", this.#keyDownHandler, { capture: this.#capture });
+      target.removeEventListener("keyup", this.#keyUpHandler, { capture: this.#capture });
+    }
+
+    this.#clearReleaseTimeout(target);
+    this.#pressedTargets.delete(target);
+  }
+
+  /** @private */
+  #handlePointerDown(e: PointerEvent): void {
+    if (this.#filter?.(e)) return;
+    if (e.pointerType === "mouse" && e.button > 1) return;
+
+    for (const target of e.composedPath()) {
+      if (target instanceof HTMLElement && this.isObserving(target)) {
+        this.#clearReleaseTimeout(target);
+        this.#pressedTargets.set(target, performance.now());
+        this.#callback(true, { x: e.x, y: e.y }, target);
+        break;
+      }
+    }
+  }
+
+  /** @private */
+  #handlePointerUp(e: PointerEvent): void {
+    if (e.pointerType === "mouse" && e.button > 1) return;
+    this.#clearPressedTargets(e.x, e.y);
+  }
+
+  /** @private */
+  #handleTouchEnd(e: TouchEvent): void {
+    this.#clearPressedTargets(e.changedTouches[0]?.clientX ?? 0, e.changedTouches[0]?.clientY ?? 0);
+  }
+
+  /** @private */
+  #handleKeyDown(e: KeyboardEvent): void {
+    if (this.#filter?.(e)) return;
+    if (e.target !== e.currentTarget) return;
+    const target = e.currentTarget as HTMLElement;
+
+    if (this.#isPressedKey?.(e.key)) {
+      if (e.key === " ") {
+        e.preventDefault();
+      }
+
+      if (!e.repeat) {
+        this.#clearReleaseTimeout(target);
+        this.#pressedTargets.set(target, performance.now());
+        const bounds = target.getBoundingClientRect();
+        this.#callback(true, { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }, target);
+      }
+    }
+  }
+
+  /** @private */
+  #handleKeyUp(e: KeyboardEvent): void {
+    if (e.target !== e.currentTarget) return;
+    const target = e.currentTarget as HTMLElement;
+
+    if (this.#pressedTargets.has(target) && this.#isPressedKey?.(e.key)) {
+      this.#clearReleaseTimeout(target);
+      const remainingTime = this.#minPressedDuration - (performance.now() - this.#pressedTargets.get(target)!);
+      const bounds = target.getBoundingClientRect();
+      if (remainingTime > 0) {
+        this.#releaseTimeouts.set(
+          target,
+          setTimeout(() => {
+            this.#pressedTargets.delete(target);
+            this.#releaseTimeouts.delete(target);
+            this.#callback(false, { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }, target);
+          }, remainingTime),
+        );
+      } else {
+        this.#pressedTargets.delete(target);
+        this.#callback(false, { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }, target);
+      }
+    }
+  }
+
+  /** @private */
+  #clearPressedTargets(x: number, y: number): void {
+    for (const target of this.#pressedTargets) {
+      this.#clearReleaseTimeout(target[0]);
+      const remainingTime = this.#minPressedDuration - (performance.now() - target[1]);
+      if (remainingTime > 0) {
+        this.#releaseTimeouts.set(
+          target[0],
+          setTimeout(() => {
+            this.#pressedTargets.delete(target[0]);
+            this.#releaseTimeouts.delete(target[0]);
+            this.#callback(false, { x, y }, target[0]);
+          }, remainingTime),
+        );
+      } else {
+        this.#pressedTargets.delete(target[0]);
+        this.#callback(false, { x, y }, target[0]);
+      }
+    }
+  }
+
+  /** @private */
+  #clearReleaseTimeout(target: HTMLElement): void {
+    const id = this.#releaseTimeouts.get(target);
+    if (id !== undefined) {
+      clearTimeout(id);
+      this.#releaseTimeouts.delete(target);
+    }
+  }
+}

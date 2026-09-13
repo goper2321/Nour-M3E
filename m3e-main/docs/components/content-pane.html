@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Content Pane for M3E</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Content Pane for M3E" />
+    <base href="./" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0"
+      rel="stylesheet"
+    />
+    <link href="../main.css" rel="stylesheet" />
+    <link href="api-viewer.css" rel="stylesheet" />
+    <link href="content-pane.css" rel="stylesheet" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/api-viewer-element/+esm"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@m3e/web@2.7.12/dist/all.min.js"></script>
+    <script src="../main.js"></script>
+  </head>
+  <body>
+    <m3e-theme strong-focus></m3e-theme>
+    <div class="panes">
+      <m3e-content-pane id="body">
+        <m3e-heading m3e-toc-ignore variant="display" size="large" level="1">Content Pane</m3e-heading>
+        <p>
+          The <code>m3e-content-pane</code> component renders a shaped surface with padding and vertical scrolling for
+          document-like content.
+        </p>
+
+        <m3e-card variant="outlined" class="install">
+          <pre slot="content">import "@m3e/web/content-pane";</pre>
+        </m3e-card>
+
+        <m3e-heading variant="headline" size="medium" level="2">Usage</m3e-heading>
+        <p>
+          Use the <code>m3e-content-pane</code> to render a shaped surface with padding and vertical scrolling for
+          document-like content. Inline padding is automatically adjusted to provide uniform spacing by compensating for
+          platform scrollbar width, ensuring the content remains visually centered.
+        </p>
+        <p>
+          The following example is shown inside a filled card to demonstrate the content pane's default surface color
+          and shape.
+        </p>
+
+        <m3e-card variant="outlined" class="showcase">
+          <div slot="content">
+            <m3e-content-pane>
+              <m3e-heading m3e-toc-ignore variant="display" size="large">Content header</m3e-heading>
+              <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed vitae ligula at ipsum pulvinar tincidunt.
+                Integer feugiat, tortor non aliquet facilisis, velit risus faucibus lorem, vitae porttitor justo arcu
+                nec sapien. Curabitur euismod, urna vel placerat dictum, augue sem ullamcorper velit, id interdum neque
+                magna non nisl. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae.
+                Suspendisse potenti. Praesent ac orci eget urna volutpat fermentum. Donec non mi sed sapien gravida
+                aliquet. Vivamus at orci id libero scelerisque convallis. Pellentesque habitant morbi tristique senectus
+                et netus et malesuada fames ac turpis egestas. Cras ac erat id velit pharetra luctus. Mauris sed nisl
+                sed arcu facilisis tincidunt. Aliquam erat volutpat. Sed sit amet massa non magna gravida cursus. Sed
+                vulputate, velit id suscipit convallis, lorem ipsum varius neque, sed porttitor lacus justo vitae
+                libero. Integer at felis vel lacus porta posuere. Aenean non lorem ac nulla gravida tincidunt.
+                Pellentesque vel urna id libero dictum gravida. Donec sit amet velit nec sapien ultricies tincidunt.
+                Vivamus in augue id libero sodales tincidunt. Integer id lorem nec sapien bibendum tincidunt. Sed id
+                lacus non justo viverra tincidunt. Curabitur id risus vitae justo tincidunt gravida. Vivamus id ligula
+                non ipsum porta tincidunt. Pellentesque id lorem nec sapien dictum tincidunt. Integer id lorem nec
+                sapien bibendum tincidunt.
+              </p>
+            </m3e-content-pane>
+          </div>
+        </m3e-card>
+
+        <m3e-card variant="outlined" class="example">
+          <pre slot="content">
+&lt;m3e-content-pane&gt;
+  &lt;m3e-heading variant=&quot;display&quot; size=&quot;large&quot;&gt;Content header&lt;/m3e-heading&gt;
+  &lt;p&gt;
+    &lt;!-- Content omitted for brevity --&gt;
+  &lt;/p&gt;
+&lt;/m3e-content-pane&gt;</pre
+          >
+        </m3e-card>
+
+        <m3e-heading variant="headline" size="medium" level="2">Accessibility</m3e-heading>
+        <p>
+          By default, content panes are not given an ARIA role, indicating that they are treated as neutral,
+          non-semantic elements in the accessibility tree unless explicitly referenced or annotated.
+        </p>
+
+        <m3e-heading variant="headline" size="medium" level="2">Native module support</m3e-heading>
+        <p>
+          The <code>@m3e/web</code> package uses
+          <a
+            href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules#module_specifiers"
+            target="_blank"
+            >JavaScript Modules</a
+          >. To use it directly in a browser without a bundler, use a module script similar to the following.
+        </p>
+
+        <m3e-card variant="outlined" class="example">
+          <pre slot="content">
+&lt;script type=&quot;module&quot; src=&quot;/node_modules/@m3e/web/dist/content-pane.js&quot;&gt;&lt;/script&gt;</pre
+          >
+        </m3e-card>
+        <p>
+          In addition, you must use an
+          <a
+            href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap"
+            target="_blank"
+            >import map</a
+          >
+          to include additional dependencies.
+        </p>
+        <m3e-card variant="outlined" class="install">
+          <pre slot="content">
+&lt;script type=&quot;importmap&quot;&gt;
+  {
+    &quot;imports&quot;: {
+      &quot;tslib&quot;: &quot;https://cdn.jsdelivr.net/npm/tslib@2.8.1/+esm&quot;,
+      &quot;lit&quot;: &quot;https://cdn.jsdelivr.net/npm/lit@3.3.0/+esm&quot;,
+      &quot;lit/&quot;: &quot;https://cdn.jsdelivr.net/npm/lit@3.3.0/&quot;,
+      &quot;lit-html&quot;: &quot;https://cdn.jsdelivr.net/npm/lit-html@3.3.0/+esm&quot;,
+      &quot;lit-html/directive.js&quot;: &quot;https://cdn.jsdelivr.net/npm/lit-html@3.3.0/directive.js&quot;,
+      &quot;@lit/reactive-element&quot;: &quot;https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/+esm&quot;,
+      &quot;@lit/reactive-element/&quot;: &quot;https://cdn.jsdelivr.net/npm/@lit/reactive-element@2.0.4/&quot;,
+      &quot;@m3e/web/core&quot;: &quot;/node_modules/@m3e/web/dist/core.js&quot;
+    }
+  }
+&lt;/script&gt;</pre
+          >
+        </m3e-card>
+        <p>For production builds, use the minified files to ensure optimal load performance.</p>
+
+        <m3e-heading variant="headline" size="medium" level="2">API</m3e-heading>
+        <p>
+          The <code>@m3e/web</code> package includes a
+          <a href="https://github.com/webcomponents/custom-elements-manifest" target="_blank"
+            >Custom Elements Manifest</a
+          >
+          (<code>custom-elements.json</code>), which documents the properties, attributes, slots, events and CSS custom
+          properties of each component.
+        </p>
+        <p>You can explore the API below, or integrate the manifest into your own tooling.</p>
+        <m3e-heading variant="headline" size="small" level="3">m3e-content-pane</m3e-heading>
+        <api-viewer only="m3e-content-pane"> </api-viewer>
+      </m3e-content-pane>
+      <m3e-toc class="toc" for="body">
+        <span slot="overline">On this page</span>
+        <span slot="title">Content Pane</span>
+      </m3e-toc>
+    </div>
+  </body>
+</html>

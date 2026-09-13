@@ -1,0 +1,10 @@
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  margin-block-start: 16px;
+}
+m3e-card + m3e-card {
+  margin: unset;
+}

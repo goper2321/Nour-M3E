@@ -1,0 +1,77 @@
+import {
+  autoUpdate,
+  computePosition,
+  ComputePositionReturn,
+  flip,
+  inline,
+  limitShift,
+  Middleware,
+  offset,
+  platform,
+  shift,
+} from "@floating-ui/dom";
+
+import { offsetParent } from "composed-offset-position";
+
+import { AnchorOptions } from "./AnchorOptions";
+import { AnchorPosition } from "./AnchorPosition";
+
+/**
+ * Positions an element relative to an anchor element.
+ * @param {HTMLElement} target The element to position.
+ * @param {HTMLElement} anchor The element in which to anchor `target`.
+ * @param {AnchorOptions} options Options that control positioning relative to the anchor.
+ * @param {((x: number, y: number, position: AnchorPosition) => void)} update Callback used to position `target`.
+ * @returns {Promise<() => void>} Promise that resolves to a function used to stop updating target when the position of the anchor element changes.
+ */
+export async function positionAnchor(
+  target: HTMLElement,
+  anchor: HTMLElement,
+  options: AnchorOptions,
+  update: (x: number, y: number, position: AnchorPosition) => void,
+): Promise<() => void> {
+  const lastResult: Omit<ComputePositionReturn, "strategy" | "middlewareData"> = {
+    x: Number.MIN_SAFE_INTEGER,
+    y: Number.MIN_SAFE_INTEGER,
+    placement: "bottom",
+  };
+
+  async function computeAnchorPosition() {
+    const middleware = new Array<Middleware>();
+
+    if (options?.inline) {
+      middleware.push(inline());
+    }
+    if (options.flip) {
+      middleware.push(options.flip === true ? flip() : flip({ fallbackPlacements: options.flip }));
+    }
+    if (options.shift) {
+      middleware.push(
+        shift({
+          mainAxis: options.shift === "main" || options.shift === "both",
+          crossAxis: options.shift === "cross" || options.shift === "both",
+          limiter: limitShift(),
+        }),
+      );
+    }
+    if (options.offset && !isNaN(options.offset)) {
+      middleware.push(offset(options.offset));
+    }
+
+    const result = await computePosition(anchor, target, {
+      placement: options.position,
+      middleware: middleware,
+      platform: { ...platform, getOffsetParent: (x) => platform.getOffsetParent(x, offsetParent) },
+    });
+
+    const { x, y, placement } = result;
+    if (lastResult.x !== x || lastResult.y !== y || lastResult.placement !== placement) {
+      update(x, y, placement);
+    }
+
+    Object.assign(lastResult, { x, y, placement });
+  }
+
+  await computeAnchorPosition();
+  return autoUpdate(anchor, target, async () => await computeAnchorPosition());
+}

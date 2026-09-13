@@ -1,0 +1,224 @@
+import { LitElement, html, css, PropertyValues } from "lit";
+import { property, query } from "lit/decorators.js";
+
+import {
+  AttachInternals,
+  customElement,
+  DesignToken,
+  ReconnectedCallback,
+  Role,
+  setCustomEnumState,
+} from "@m3e/web/core";
+
+import { isLoadingIndicatorVariant, LoadingIndicatorVariant } from "./LoadingIndicatorVariant";
+import { LoadingIndicatorToken } from "./LoadingIndicatorToken";
+import { ShapePolygon } from "./ShapePolygon";
+
+/**
+ * Shows indeterminate progress for a short wait time.
+ *
+ * @description
+ * The `m3e-loading-indicator` component uses animation to grab attention, mitigate perceived latency, and indicate
+ * that an activity is in progress.
+ *
+ * When placed over other content, use the `variant` attribute to change the appearance from `uncontained` (the default),
+ * to `contained` so that it has strong contrast to help it stand out better.
+ *
+ * @example
+ * The following example illustrates an uncontained loading indicator.
+ * ```html
+ * <m3e-loading-indicator></m3e-loading-indicator>
+ * ```
+ *
+ * @tag m3e-loading-indicator
+ *
+ * @attr variant - The appearance variant of the indicator.
+ *
+ * @cssprop --m3e-loading-indicator-active-indicator-color - Uncontained active indicator color.
+ * @cssprop --m3e-loading-indicator-contained-active-indicator-color - Contained active indicator color.
+ * @cssprop --m3e-loading-indicator-contained-container-color - Contained container (background) color.
+ * @cssprop --m3e-loading-indicator-active-indicator-size - Size of the active indicator.
+ * @cssprop --m3e-loading-indicator-container-shape - Container shape.
+ * @cssprop --m3e-loading-indicator-container-size - Container size.
+ */
+@customElement("m3e-loading-indicator")
+export class M3eLoadingIndicatorElement extends ReconnectedCallback(Role(AttachInternals(LitElement), "progressbar")) {
+  /** The styles of the element. */
+  static override styles = css`
+    :host {
+      display: inline-block;
+      aspect-ratio: 1 / 1;
+      contain: strict;
+      vertical-align: middle;
+      content-visibility: auto;
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    :host(:is(:state(--uncontained), :--uncontained)) {
+      width: ${LoadingIndicatorToken.activeIndicatorSize};
+    }
+    :host(:is(:state(--contained), :--contained)) {
+      width: ${LoadingIndicatorToken.containerSize};
+    }
+    :host(:is(:state(--uncontained), :--uncontained)) .active-indicator {
+      background-color: ${LoadingIndicatorToken.activeIndicatorColor};
+    }
+    :host(:is(:state(--contained), :--contained)) .active-indicator {
+      background-color: ${LoadingIndicatorToken.containedActiveIndicatorColor};
+    }
+    :host(:is(:state(--contained), :--contained)) .container {
+      background-color: ${LoadingIndicatorToken.containedContainerColor};
+    }
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: ${LoadingIndicatorToken.containerShape};
+    }
+    .active-indicator {
+      margin: auto;
+      aspect-ratio: 1 / 1;
+      width: calc(${LoadingIndicatorToken.activeIndicatorSize} * 0.842);
+      transform-origin: center;
+      transition: clip-path ${DesignToken.motion.spring.slowEffects};
+      will-change: transform, clip-path;
+
+      --_polygon-soft-burst: polygon(${ShapePolygon["soft-burst"]});
+      --_polygon-9-sided-cookie: polygon(${ShapePolygon["9-sided-cookie"]});
+      --_polygon-pentagon: polygon(${ShapePolygon["pentagon"]});
+      --_polygon-pill: polygon(${ShapePolygon["pill"]});
+      --_polygon-sunny: polygon(${ShapePolygon["sunny"]});
+      --_polygon-4-sided-cookie: polygon(${ShapePolygon["4-sided-cookie"]});
+      --_polygon-oval: polygon(${ShapePolygon["oval"]});
+    }
+    .container.animate .active-indicator-wrapper {
+      animation: rotate-outer 4666ms linear infinite;
+      transform-origin: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform;
+    }
+    @keyframes rotate-outer {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    .container.animate .active-indicator {
+      animation: rotate-inner 4666ms cubic-bezier(0.34, 0.88, 0.34, 1) infinite;
+    }
+    @keyframes rotate-inner {
+      0% {
+        clip-path: var(--_polygon-soft-burst);
+        transform: rotate(0deg);
+      }
+      14% {
+        clip-path: var(--_polygon-9-sided-cookie);
+        transform: rotate(154deg) scale(1);
+      }
+      29% {
+        clip-path: var(--_polygon-pentagon);
+        transform: rotate(309deg) scale(1);
+      }
+      43% {
+        clip-path: var(--_polygon-pill);
+        transform: rotate(463deg) scale(1);
+      }
+      57% {
+        clip-path: var(--_polygon-sunny);
+        transform: rotate(617deg) scale(1);
+      }
+      71% {
+        clip-path: var(--_polygon-4-sided-cookie);
+        transform: rotate(771deg) scale(1);
+      }
+      83% {
+        clip-path: var(--_polygon-oval);
+        transform: rotate(926deg) scale(1);
+      }
+      100% {
+        clip-path: var(--_polygon-soft-burst);
+        transform: rotate(1080deg) scale(1);
+      }
+    }
+    @media (forced-colors: active) {
+      .active-indicator {
+        background-color: CanvasText !important;
+      }
+    }
+  `;
+
+  /** @private */
+  @query(".container") private readonly _container?: HTMLElement;
+
+  /**
+   * The appearance variant of the indicator.
+   * @default "uncontained"
+   */
+  @property({ reflect: true, useDefault: true }) variant: LoadingIndicatorVariant = "uncontained";
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    super.connectedCallback();
+
+    this.#applyVariant();
+    this.ariaValueMin = this.ariaValueMin || "0";
+    this.ariaValueMax = this.ariaValueMax || "100";
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._container?.classList.toggle("animate", false);
+  }
+
+  /** @inheritdoc */
+  override reconnectedCallback(): void {
+    super.reconnectedCallback();
+    this._container?.classList.toggle("animate", true);
+  }
+
+  /** @inheritdoc */
+  protected override willUpdate(_changedProperties: PropertyValues<this>): void {
+    super.willUpdate(_changedProperties);
+
+    if (_changedProperties.has("variant")) {
+      this.#applyVariant();
+    }
+  }
+
+  /** @inheritdoc */
+  protected override firstUpdated(_changedProperties: PropertyValues): void {
+    super.firstUpdated(_changedProperties);
+    this._container?.classList.toggle("animate", true);
+  }
+
+  /** @inheritdoc */
+  override render() {
+    return html`<div class="container" aria-hidden="true">
+      <div class="active-indicator-wrapper">
+        <div class="active-indicator"></div>
+      </div>
+    </div>`;
+  }
+
+  /** @private */
+  #applyVariant(): void {
+    if (!isLoadingIndicatorVariant(this.variant)) {
+      this.variant = "uncontained";
+    }
+    setCustomEnumState(this, this.variant, "contained", "uncontained");
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-loading-indicator": M3eLoadingIndicatorElement;
+  }
+}

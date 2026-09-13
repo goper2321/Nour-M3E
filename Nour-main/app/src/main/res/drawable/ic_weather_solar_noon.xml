@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Sun disk -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M12,8 A4,4 0 1,1 11.99,8" />
+    <!-- Zenith vertical beam pointing down to earth -->
+    <path
+        android:strokeColor="#FEF08A"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,14 L12,21 M10,19 L12,21 L14,19" />
+    <!-- Radiating noon rays -->
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M12,3 L12,5 M5,12 L7,12 M17,12 L19,12 M7.05,7.05 L8.46,8.46 M15.54,8.46 L16.95,7.05" />
+</vector>

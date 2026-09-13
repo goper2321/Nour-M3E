@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Star 1 (Four-pointed sparkle) -->
+    <path
+        android:fillColor="#FEF08A"
+        android:pathData="M37,12 C37,14 38,15 40,15 C38,15 37,16 37,18 C37,16 36,15 34,15 C36,15 37,14 37,12 Z" />
+    <!-- Star 2 (Small sparkle) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31,32 C31,33.5 31.8,34.2 33.2,34.2 C31.8,34.2 31,35 31,36.5 C31,35 30.2,34.2 28.8,34.2 C30.2,34.2 31,33.5 31,32 Z" />
+    <!-- Star 3 (Micro dot star) -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M11,15 A1.5,1.5 0 1,1 10.99,15" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,24 A1,1 0 1,1 37.99,24" />
+    <!-- Moon Body Crescent -->
+    <path
+        android:fillColor="#FEF08A"
+        android:pathData="M26.5,7 C16.28,7 8,15.28 8,25.5 C8,35.72 16.28,44 26.5,44 C31.6,44 36.22,41.93 39.56,38.58 C32.74,38.2 27.27,32.48 27.27,25.5 C27.27,18.52 32.74,12.8 39.56,12.42 C36.22,9.07 31.6,7 26.5,7 Z" />
+    <!-- Subtle Inner Crescent Contour -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeAlpha="0.5"
+        android:pathData="M23,10 C15,12 11,18 11,25.5 C11,33 15,39 23,41" />
+    <!-- Crater subtle highlights -->
+    <path
+        android:fillColor="#FACC15"
+        android:fillAlpha="0.65"
+        android:pathData="M20,20 A2.5,2.5 0 1,1 19.99,20" />
+    <path
+        android:fillColor="#FACC15"
+        android:fillAlpha="0.65"
+        android:pathData="M16,28 A2,2 0 1,1 15.99,28" />
+    <path
+        android:fillColor="#FACC15"
+        android:fillAlpha="0.65"
+        android:pathData="M23,33 A1.5,1.5 0 1,1 22.99,33" />
+</vector>

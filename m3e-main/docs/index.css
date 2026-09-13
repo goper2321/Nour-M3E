@@ -1,0 +1,91 @@
+:root {
+  --md-sys-color-background: var(--md-sys-color-surface-container-low);
+  --m3e-scrollbar-width: thin;
+}
+html {
+  overflow: hidden;
+}
+body {
+  font-family: "Roboto";
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+main {
+  display: contents;
+}
+*:not(:defined) {
+  visibility: hidden;
+}
+.docs-header-bar {
+  flex: none;
+  z-index: 4;
+  --m3e-app-bar-container-color: var(--md-sys-color-surface-container-low);
+}
+.docs-frame {
+  display: block;
+  background: transparent;
+  height: 100%;
+  width: 100%;
+  border: none;
+}
+.docs-frame[hidden] {
+  visibility: hidden;
+}
+.docs-drawer-container {
+  --m3e-drawer-container-color: var(--md-sys-color-surface-container-low);
+  --m3e-modal-drawer-container-color: var(--md-sys-color-surface-container);
+}
+#settings-drawer {
+  display: flex;
+  flex-direction: column;
+  row-gap: 16px;
+  box-sizing: border-box;
+  padding-inline: 16px;
+  padding-block: 8px;
+  overflow-x: auto;
+}
+#settings-drawer > m3e-segmented-button {
+  width: fit-content;
+}
+input[type="color"] {
+  appearance: none;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  outline-color: var(--md-sys-color-secondary);
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.title-text {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.title-version {
+  flex: none;
+  min-width: 0;
+}
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: #1c1b1e;
+    color: #e6e1e6;
+  }
+}

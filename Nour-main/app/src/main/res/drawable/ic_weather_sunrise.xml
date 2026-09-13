@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Horizon Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.6"
+        android:pathData="M3,19 L21,19" />
+    <!-- Rising Sun Half Disk -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M6.5,19 C6.5,15.96 8.96,13.5 12,13.5 C15.04,13.5 17.5,15.96 17.5,19 Z" />
+    <!-- Upward arrow indicating sunrise -->
+    <path
+        android:strokeColor="#FDE68A"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,10 L12,3 M9,6 L12,3 L15,6" />
+    <!-- Radiating sunbeams -->
+    <path
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M5,14 L3.5,13 M19,14 L20.5,13 M7.5,10.5 L6,9 M16.5,10.5 L18,9" />
+</vector>

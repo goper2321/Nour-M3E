@@ -1,0 +1,60 @@
+import { LitElement, PropertyValues } from "lit";
+import { property } from "lit/decorators.js";
+
+import { Constructor } from "./Constructor";
+import { hasKeys } from "./hasKeys";
+
+/** Defines functionality for an element which supports a required state. */
+export interface RequiredMixin {
+  /**
+   * Whether a value is required for the element.
+   * @default false
+   */
+  required: boolean;
+
+  /** Whether a value is not required for the element. */
+  readonly optional: boolean;
+}
+
+/**
+ * Determines whether a value is a `RequiredMixin`.
+ * @param {unknown} value The value to test.
+ * @returns Whether `value` is a `RequiredMixin`.
+ */
+export function isRequiredMixin(value: unknown): value is RequiredMixin {
+  return hasKeys<RequiredMixin>(value, "required", "optional");
+}
+
+/**
+ * Mixin to augment an element with behavior that supports a required state.
+ * @template T The type of the base class.
+ * @param {T} base The base class.
+ * @param {boolean} [supportsAria=true] Whether ARIA is supported.
+ * @returns {Constructor<RequiredMixin> & T} A constructor that implements `RequiredMixin`.
+ */
+export function Required<T extends Constructor<LitElement>>(
+  base: T,
+  supportsAria: boolean = true,
+): Constructor<RequiredMixin> & T {
+  abstract class _RequiredMixin extends base implements RequiredMixin {
+    /**
+     * Whether a value is required for the element.
+     * @default false
+     */
+    @property({ type: Boolean, reflect: true }) required = false;
+
+    /** Whether a value is not required for the element. */
+    get optional() {
+      return !this.required;
+    }
+
+    /** @inheritdoc */
+    protected override update(changedProperties: PropertyValues<this>): void {
+      super.update(changedProperties);
+      if (changedProperties.has("required") && supportsAria) {
+        this.ariaRequired = `${this.required}`;
+      }
+    }
+  }
+  return _RequiredMixin;
+}

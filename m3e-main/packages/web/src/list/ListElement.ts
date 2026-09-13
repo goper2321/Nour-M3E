@@ -1,0 +1,278 @@
+import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
+import { property } from "lit/decorators.js";
+
+import { AttachInternals, customElement, DesignToken, Role, setCustomEnumState, setCustomState } from "@m3e/web/core";
+
+import { isListVariant, ListVariant } from "./ListVariant";
+import { M3eListItemElement } from "./ListItemElement";
+import { ListItemContentType } from "./ListItemContentType";
+
+/**
+ * A list of items.
+ *
+ * @description
+ * The `m3e-list` component provides a list container for organizing and displaying
+ * multiple list items. It supports flexible layout, custom padding, and divider insets
+ * via CSS custom properties.
+ *
+ * @example
+ * The following example illustrates a list with a single item using all supported slots.
+ *
+ * Note: This example uses the `@m3e/icon` package to present Material Design symbols, but any icon package can be
+ * substituted depending on your design system or preferences
+ *
+ * ```html
+ * <m3e-list>
+ *  <m3e-list-item>
+ *    <m3e-icon slot="leading-icon" name="person"></m3e-icon>
+ *    <span slot="overline">Overline</span>
+ *    Headline
+ *    <span slot="supporting-text">Supporting text</span>
+ *    <span slot="trailing-text">100+</span>
+ *    <m3e-icon slot="trailing-icon" name="arrow_right"></m3e-icon>
+ *  </m3e-list-item>
+ * </m3e-list>
+ * ```
+ *
+ * @tag m3e-list
+ *
+ * @slot - Renders the items of the list.
+ *
+ * @attr variant - The appearance variant of the list.
+ *
+ * @cssprop --m3e-list-divider-inset-start-size - Start inset for dividers within the list.
+ * @cssprop --m3e-list-divider-inset-end-size - End inset for dividers within the list.
+ * @cssprop --m3e-segmented-list-segment-gap - Gap between list items in segmented variant.
+ * @cssprop --m3e-segmented-list-container-shape - Border radius of the segmented list container.
+ * @cssprop --m3e-segmented-list-item-container-color - Background color of items in segmented variant.
+ * @cssprop --m3e-segmented-list-item-disabled-container-color - Background color of disabled items in segmented variant.
+ * @cssprop --m3e-segmented-list-item-container-shape - Border radius of items in segmented variant.
+ * @cssprop --m3e-segmented-list-item-hover-container-shape - Border radius of items in segmented variant on hover.
+ * @cssprop --m3e-segmented-list-item-focus-container-shape - Border radius of items in segmented variant on focus.
+ * @cssprop --m3e-segmented-list-item-selected-container-shape - Border radius of items in segmented variant when selected.
+ */
+@customElement("m3e-list")
+export class M3eListElement extends AttachInternals(Role(LitElement, "list")) {
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding-block: var(--m3e-list-block-padding, 0px);
+
+      --m3e-divider-inset-start-size: var(--m3e-list-divider-inset-start-size, ${DesignToken.measurement.space200});
+      --m3e-divider-inset-end-size: var(--m3e-list-divider-inset-end-size, ${DesignToken.measurement.space300});
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    :host(:is(:state(--standard), :--standard)) {
+      --_list-item-leading-video-outset: var(--m3e-list-item-leading-space, ${DesignToken.measurement.space200});
+      --_list-item-trailing-video-outset: var(--m3e-list-item-trailing-space, ${DesignToken.measurement.space200});
+      --_expandable-list-item-expanded-toggle-icon-container-color: transparent;
+    }
+    :host(:is(:state(--segmented), :--segmented)) {
+      row-gap: var(--m3e-segmented-list-segment-gap, ${DesignToken.measurement.space25});
+    }
+    :host(:is(:state(--segmented), :--segmented)) {
+      --m3e-list-item-container-color: var(--m3e-segmented-list-item-container-color, ${DesignToken.color.surface});
+      --m3e-list-item-disabled-container-color: var(
+        --m3e-segmented-list-item-disabled-container-color,
+        ${DesignToken.color.surface}
+      );
+      --m3e-list-item-container-shape: var(
+        --m3e-segmented-list-item-container-shape,
+        ${DesignToken.shape.corner.extraSmall}
+      );
+      --m3e-list-item-hover-container-shape: var(
+        --m3e-segmented-list-item-hover-container-shape,
+        ${DesignToken.shape.corner.medium}
+      );
+      --m3e-list-item-focus-container-shape: var(
+        --m3e-segmented-list-item-focus-container-shape,
+        ${DesignToken.shape.corner.large}
+      );
+      --m3e-list-item-selected-container-shape: var(
+        --m3e-segmented-list-item-selected-container-shape,
+        ${DesignToken.shape.corner.large}
+      );
+      --m3e-list-item-video-shape: var(--m3e-segmented-list-item-video-shape, ${DesignToken.shape.corner.small});
+      --m3e-list-item-image-shape: var(--m3e-segmented-list-item-image-shape, ${DesignToken.shape.corner.small});
+      --m3e-list-item-between-space: var(--m3e-segmented-list-item-spacing, ${DesignToken.measurement.space150});
+      --_expandable-list-item-items-segment-gap: var(
+        --m3e-segmented-list-segment-gap,
+        ${DesignToken.measurement.space25}
+      );
+      --_expandable-list-item-expanded-top-shape: var(
+        --m3e-segmented-list-container-shape,
+        ${DesignToken.shape.corner.large}
+      );
+    }
+    :host(:is(:state(--segmented), :--segmented)) ::slotted(:is(:state(--first), :--first)),
+    :host(:is(:state(--segmented), :--segmented))
+      ::slotted(:is(:state(--has-previous-open), :--has-previous-open):not([open])) {
+      --_list-item-top-container-shape: var(--m3e-segmented-list-container-shape, ${DesignToken.shape.corner.large});
+    }
+    :host(:is(:state(--segmented), :--segmented)) ::slotted(:is(:state(--has-next-open), :--has-next-open):not([open])),
+    :host(:is(:state(--segmented), :--segmented)) ::slotted(:is(:state(--last), :--last)) {
+      --_list-item-bottom-container-shape: var(--m3e-segmented-list-container-shape, ${DesignToken.shape.corner.large});
+    }
+    :host(:is(:state(--segmented), :--segmented)) ::slotted(m3e-divider) {
+      display: none;
+    }
+    :host(:is(:state(--has-leading-video), :--has-leading-video)) {
+      --_list-item-leading-reserved-display: block;
+      --_list-item-leading-reserved-space: var(--m3e-list-item-video-width, 100px);
+    }
+    :host(:is(:state(--standard), :--standard):is(:state(--has-leading-video), :--has-leading-video)) {
+      --_list-item-leading-reserved-outset: var(--m3e-list-item-leading-space, ${DesignToken.measurement.space200});
+      --_list-item-trailing-reserved-outset: var(--m3e-list-item-trailing-space, ${DesignToken.measurement.space200});
+    }
+    :host(:is(:state(--has-leading-image), :--has-leading-image)) {
+      --_list-item-leading-reserved-display: block;
+      --_list-item-leading-reserved-space: var(--m3e-list-item-image-width, 56px);
+    }
+    :host(:is(:state(--has-leading-avatar), :--has-leading-avatar)) {
+      --_list-item-leading-reserved-display: block;
+      --_list-item-leading-reserved-space: var(--m3e-avatar-size, 40px);
+    }
+    :host(:is(:state(--has-leading-icon), :--has-leading-icon)) {
+      --_list-item-leading-reserved-display: block;
+      --_list-item-leading-reserved-space: var(--m3e-list-item-icon-size, 24px);
+    }
+  `;
+
+  /** @private */ #items = new Array<M3eListItemElement>();
+  /** @private */ #leadingContentTypes = { video: 0, image: 0, avatar: 0, icon: 0, text: 0 };
+  /** @private */ #trailingContentTypes = { video: 0, image: 0, avatar: 0, icon: 0, text: 0 };
+
+  /**
+   * The appearance variant of the list.
+   * @default "standard"
+   */
+  @property({ reflect: true, useDefault: true }) variant: ListVariant = "standard";
+
+  /** The items of the list. */
+  get items(): ReadonlyArray<M3eListItemElement> {
+    return this.#items;
+  }
+
+  /** The type of leading content. */
+  get leadingContentType(): ListItemContentType {
+    return this.#leadingContentTypes.video > 0
+      ? "video"
+      : this.#leadingContentTypes.image > 0
+        ? "image"
+        : this.#leadingContentTypes.avatar > 0
+          ? "avatar"
+          : this.#leadingContentTypes.icon > 0
+            ? "icon"
+            : this.#leadingContentTypes.text > 0
+              ? "text"
+              : undefined;
+  }
+
+  /** The type of trailing content. */
+  get trailingContentType(): ListItemContentType {
+    return this.#trailingContentTypes.video > 0
+      ? "video"
+      : this.#trailingContentTypes.image > 0
+        ? "image"
+        : this.#trailingContentTypes.avatar > 0
+          ? "avatar"
+          : this.#trailingContentTypes.icon > 0
+            ? "icon"
+            : this.#trailingContentTypes.text > 0
+              ? "text"
+              : undefined;
+  }
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#applyVariant();
+  }
+
+  /** @inheritdoc */
+  protected override willUpdate(_changedProperties: PropertyValues<this>): void {
+    super.willUpdate(_changedProperties);
+    if (_changedProperties.has("variant")) {
+      this.#applyVariant();
+    }
+  }
+
+  /** @inheritdoc */
+  protected override render(): unknown {
+    return html`<slot @slotchange=${this.#handleSlotChange}></slot>`;
+  }
+
+  /** @private */
+  #applyVariant(): void {
+    if (!isListVariant(this.variant)) {
+      this.variant = "standard";
+    }
+    setCustomEnumState(this, this.variant, "segmented", "standard");
+  }
+
+  /** @private */
+  #handleSlotChange(e: Event): void {
+    this.#items = (e.target as HTMLSlotElement)
+      .assignedElements({ flatten: true })
+      .filter((x) => x instanceof M3eListItemElement);
+
+    this.#items.forEach((x, i) => {
+      setCustomState(x, "--first", i === 0);
+      setCustomState(x, "--last", i === this.#items.length - 1);
+    });
+
+    this.notifyItemsChange();
+  }
+
+  /**
+   * @internal
+   * Notifies the list that items have changed.
+   */
+  notifyItemsChange(): void {}
+
+  /**
+   * @internal
+   * Notifies the list that the leading content of an item has changed.
+   */
+  notifyLeadingContentTypeChange(oldType: ListItemContentType, newType: ListItemContentType): void {
+    if (oldType) {
+      this.#leadingContentTypes[oldType]--;
+    }
+    if (newType) {
+      this.#leadingContentTypes[newType]++;
+    }
+
+    ["video", "image", "avatar", "icon"].forEach((x) => {
+      setCustomState(this, `--has-leading-${x}`, this.leadingContentType === x);
+    });
+  }
+
+  /**
+   * @internal
+   * Notifies the list that the trailing content of an item has changed.
+   */
+  notifyTrailingContentTypeChange(oldType: ListItemContentType, newType: ListItemContentType): void {
+    if (oldType) {
+      this.#trailingContentTypes[oldType]--;
+    }
+    if (newType) {
+      this.#trailingContentTypes[newType]--;
+    }
+
+    ["video", "image", "avatar", "icon"].forEach((x) => {
+      setCustomState(this, `--has-trailing-${x}`, this.trailingContentType === x);
+    });
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-list": M3eListElement;
+  }
+}

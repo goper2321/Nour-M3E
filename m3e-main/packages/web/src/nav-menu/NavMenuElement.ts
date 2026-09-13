@@ -1,0 +1,422 @@
+import { css, CSSResultGroup, html, LitElement } from "lit";
+
+import {
+  customElement,
+  DesignToken,
+  FocusController,
+  forcedColorsActive,
+  PressedController,
+  registerStyleSheet,
+  Role,
+  scrollIntoViewIfNeeded,
+} from "@m3e/web/core";
+
+import { SelectionManager, selectionManager } from "@m3e/web/core/a11y";
+import { M3eDirectionality } from "@m3e/web/core/bidi";
+
+import { M3eNavMenuItemElement } from "./NavMenuItemElement";
+
+/**
+ * A hierarchical menu, typically used on larger devices, that allows a user to switch between views.
+ *
+ * @description
+ * The `m3e-nav-menu` component provides a hierarchical, accessible navigation menu supporting
+ * nested expandable items, keyboard navigation, and focus management. It is highly customizable
+ * via slots and CSS custom properties, and is designed for use in sidebars, navigation drawers,
+ * and complex menu structures.
+ *
+ * @example
+ * The following example illustrates a navigation menu with a top-level group of menu items.
+ * ```html
+ * <m3e-nav-menu>
+ *   <m3e-nav-menu-item-group>
+ *     <m3e-heading slot="label" variant="label" size="large">Mail</m3e-heading>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="mail"></m3e-icon>
+ *       <span slot="label">Inbox</span>
+ *       <span slot="badge">24</span>
+ *     </m3e-nav-menu-item>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="send"></m3e-icon>
+ *       <span slot="label">Outbox</span>
+ *     </m3e-nav-menu-item>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="favorite"></m3e-icon>
+ *       <span slot="label">Favorites</span>
+ *     </m3e-nav-menu-item>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="delete"></m3e-icon>
+ *       <span slot="label">Trash</span>
+ *     </m3e-nav-menu-item>
+ *   </m3e-nav-menu-item-group>
+ * </m3e-nav-menu>
+ * ```
+ *
+ * @example
+ * The next example illustrates a multilevel navigation menu.
+ * ```html
+ * <m3e-nav-menu>
+ *   <m3e-nav-menu-item open>
+ *     <m3e-icon slot="icon" name="rocket_launch"></m3e-icon>
+ *     <span slot="label">Getting Started</span>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="widgets"></m3e-icon>
+ *       <span slot="label">Overview</span>
+ *     </m3e-nav-menu-item>
+ *     <m3e-nav-menu-item>
+ *       <m3e-icon slot="icon" name="package_2"></m3e-icon>
+ *       <span slot="label">Installation</span>
+ *     </m3e-nav-menu-item>
+ *   </m3e-nav-menu-item>
+ *   <m3e-nav-menu-item>
+ *     <span slot="label">Actions</span>
+ *     <m3e-nav-menu-item><span slot="label">Button</span></m3e-nav-menu-item>
+ *     <m3e-nav-menu-item><span slot="label">Icon</span></m3e-nav-menu-item>
+ *     <m3e-nav-menu-item><span slot="label">Icon Button</span></m3e-nav-menu-item>
+ *   </m3e-nav-menu-item>
+ * </m3e-nav-menu>
+ * ```
+ *
+ * @tag m3e-nav-menu
+ *
+ * @slot - Renders the items of the menu.
+ *
+ * @cssprop --m3e-nav-menu-padding-top - Top padding for the menu.
+ * @cssprop --m3e-nav-menu-padding-bottom - Bottom padding for the menu.
+ * @cssprop --m3e-nav-menu-padding-left - Left padding for the menu.
+ * @cssprop --m3e-nav-menu-padding-right - Right padding for the menu.
+ * @cssprop --m3e-nav-menu-divider-margin - Margin for divider elements in the menu.
+ * @cssprop --m3e-nav-menu-scrollbar-width - Width of the menu scrollbar.
+ * @cssprop --m3e-nav-menu-scrollbar-color - Color of the menu scrollbar.
+ */
+@customElement("m3e-nav-menu")
+export class M3eNavMenuElement extends Role(LitElement, "tree") {
+  static {
+    registerStyleSheet(css`
+      m3e-nav-menu > m3e-divider {
+        margin-block: var(--m3e-nav-menu-divider-margin, ${DesignToken.measurement.space50});
+        flex: none;
+      }
+    `);
+  }
+
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: block;
+      outline: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+      scrollbar-width: ${DesignToken.scrollbar.width};
+      scrollbar-color: ${DesignToken.scrollbar.color};
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    .base {
+      contain: layout style;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-height: inherit;
+      box-sizing: border-box;
+      padding-block-start: var(--m3e-nav-menu-padding-top, ${DesignToken.measurement.space100});
+      padding-block-end: var(--m3e-nav-menu-padding-bottom, ${DesignToken.measurement.space100});
+      padding-inline-start: var(--m3e-nav-menu-padding-left, ${DesignToken.measurement.space150});
+      padding-inline-end: var(--m3e-nav-menu-padding-right, ${DesignToken.measurement.space150});
+    }
+  `;
+
+  /** @private */ private static __nextId = 0;
+  /** @private */ #ignoreFocusVisible = false;
+  /** @private */ #ignoreFocus = false;
+
+  /** @private */
+  readonly [selectionManager] = new SelectionManager<M3eNavMenuItemElement>()
+    .withVerticalOrientation()
+    .withHomeAndEnd()
+    .withTypeahead()
+    .withSkipPredicate((x) => x.disabled || !x.visible)
+    .disableRovingTabIndex()
+    .onActiveItemChange(() => {
+      if (this[selectionManager].activeItem) {
+        this.#activateItem(this[selectionManager].activeItem);
+      }
+    })
+    .onSelectedItemsChange(() => {
+      const selected = this.selected;
+      for (const item of this.items) {
+        if (item !== selected) {
+          this.#updateItemFocusVisible(item, false, false);
+        }
+      }
+
+      if (selected?.label) {
+        scrollIntoViewIfNeeded(selected.label, this, { block: "start", behavior: "smooth" });
+      }
+    });
+
+  /** @private */ readonly #keyDownHandler = (e: KeyboardEvent) => this.#handleKeyDown(e);
+  /** @private */ readonly #keyUpHandler = (e: KeyboardEvent) => this.#handleKeyUp(e);
+  /** @private */ readonly #pointerDownHandler = (e: Event) => this.#handlePointerDown(e);
+
+  constructor() {
+    super();
+
+    new PressedController(this, { callback: (pressed) => (this.#ignoreFocus = pressed) });
+    new FocusController(this, {
+      callback: () => {
+        if (!this.#ignoreFocus) {
+          this.#updateFocusVisible();
+        }
+      },
+    });
+  }
+
+  /** The selected item of the menu. */
+  get selected(): M3eNavMenuItemElement | null {
+    return this[selectionManager].selectedItems[0] ?? null;
+  }
+
+  /** All the items of the menu. */
+  get items(): readonly M3eNavMenuItemElement[] {
+    return this[selectionManager].items;
+  }
+
+  /**
+   * Expands all items, and optionally, all descendants.
+   * @param {boolean} [descendants=false] Whether to expand all descendants.
+   */
+  expand(descendants?: boolean): void;
+
+  /**
+   * Expands the specified items, and optionally, all descendants.
+   * @param {M3eNavMenuItemElement[]} items The items to expand.
+   * @param {boolean} [descendants=false] Whether to expand all descendants.
+   */
+  expand(items: M3eNavMenuItemElement[], descendants?: boolean): void;
+
+  /** @internal */
+  expand(itemsOrDescendants?: M3eNavMenuItemElement[] | boolean, maybeDescendants: boolean = false): void {
+    const items = Array.isArray(itemsOrDescendants) ? itemsOrDescendants : this[selectionManager].items;
+    const descendants = typeof itemsOrDescendants === "boolean" ? itemsOrDescendants : maybeDescendants;
+    items.forEach((x) => x.expand(descendants));
+  }
+
+  /**
+   * Collapses all items, and optionally, all descendants.
+   * @param {boolean} [descendants=false] Whether to collapse all descendants.
+   */
+  collapse(descendants?: boolean): void;
+
+  /**
+   * Collapses the specified items, and optionally, all descendants.
+   * @param {M3eNavMenuItemElement[]} items The items to collapse.
+   * @param {boolean} [descendants=false] Whether to collapse all descendants.
+   */
+  collapse(items: M3eNavMenuItemElement[], descendants?: boolean): void;
+
+  /** @internal */
+  collapse(itemsOrDescendants?: M3eNavMenuItemElement[] | boolean, maybeDescendants: boolean = false): void {
+    const items = Array.isArray(itemsOrDescendants) ? itemsOrDescendants : this[selectionManager].items;
+    const descendants = typeof itemsOrDescendants === "boolean" ? itemsOrDescendants : maybeDescendants;
+
+    items.forEach((x) => x.collapse(descendants));
+    const activeItem = this[selectionManager].activeItem;
+    if (activeItem && !activeItem.visible) {
+      for (let parent = activeItem.parentItem; parent; parent = parent.parentItem) {
+        if (parent.visible) {
+          this[selectionManager].setActiveItem(parent);
+          break;
+        }
+      }
+    }
+  }
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    super.connectedCallback();
+
+    this.setAttribute("tabindex", "0");
+
+    this.addEventListener("keydown", this.#keyDownHandler);
+    this.addEventListener("keyup", this.#keyUpHandler);
+    this.addEventListener("pointerdown", this.#pointerDownHandler);
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+
+    this.removeEventListener("keydown", this.#keyDownHandler);
+    this.removeEventListener("keyup", this.#keyUpHandler);
+    this.removeEventListener("pointerdown", this.#pointerDownHandler);
+  }
+
+  /** @inheritdoc */
+  protected override render(): unknown {
+    return html`<div class="base">
+      <slot @slotchange=${this.#handleSlotChange}></slot>
+    </div>`;
+  }
+
+  /** @private */
+  #handleSlotChange(): void {
+    for (const divider of this.querySelectorAll<HTMLElement>("m3e-divider")) {
+      divider.ariaHidden = "true";
+    }
+    const { added } = this[selectionManager].setItems([...this.querySelectorAll("m3e-nav-menu-item")]);
+    for (const item of added) {
+      item.id = item.id || `m3e-nav-menu-item-${M3eNavMenuElement.__nextId++}`;
+    }
+    if (this[selectionManager].activeItem) {
+      this.setAttribute("aria-activedescendant", this[selectionManager].activeItem.id);
+      this.#updateFocusVisible();
+    } else {
+      this.removeAttribute("aria-activedescendant");
+    }
+  }
+
+  /** @private */
+  #handleKeyDown(e: KeyboardEvent): void {
+    this.#ignoreFocusVisible = false;
+    this.#updateFocusVisible();
+
+    const item = this[selectionManager].activeItem;
+    if (e.defaultPrevented || !item || item.disabled) return;
+
+    switch (e.key) {
+      case "Enter":
+      case " ":
+        e.preventDefault();
+
+        if (e.key === " ") {
+          item.indicator?.show("pressed");
+        }
+
+        if (item.hasChildItems) {
+          requestAnimationFrame(() => item.toggle());
+        } else if (!item.selected) {
+          this[selectionManager].select(item);
+          item.link?.click();
+        }
+        break;
+
+      case "*":
+        e.preventDefault();
+        item.expand(true);
+        break;
+
+      case "Left":
+      case "ArrowLeft":
+        e.preventDefault();
+        if (M3eDirectionality.current === "ltr") {
+          if (item.hasChildItems && item.open) {
+            requestAnimationFrame(() => item.collapse());
+          } else {
+            const parent = item.parentItem;
+            if (parent) {
+              this[selectionManager].setActiveItem(parent);
+            }
+          }
+        } else if (item.hasChildItems && !item.open) {
+          item.expand();
+        }
+
+        break;
+
+      case "Right":
+      case "ArrowRight":
+        e.preventDefault();
+        if (M3eDirectionality.current === "rtl") {
+          if (item.hasChildItems && item.open) {
+            requestAnimationFrame(() => item.collapse());
+          } else {
+            const parent = item.parentItem;
+            if (parent) {
+              this[selectionManager].setActiveItem(parent);
+            }
+          }
+        } else if (item.hasChildItems && !item.open) {
+          item.expand();
+        }
+        break;
+
+      default:
+        this[selectionManager].onKeyDown(e);
+        break;
+    }
+  }
+
+  /** @private */
+  #handleKeyUp(e: KeyboardEvent): void {
+    const item = this[selectionManager].activeItem;
+    if (!e.defaultPrevented && item && !item.disabled && e.key === " ") {
+      item.indicator?.hide("pressed");
+    }
+  }
+
+  /** @private */
+  #handlePointerDown(e: Event): void {
+    if (!e.defaultPrevented && !this.#ignoreFocusVisible && !forcedColorsActive()) {
+      this.#ignoreFocusVisible = true;
+
+      const item = e
+        .composedPath()
+        .reverse()
+        .find((x) => x instanceof M3eNavMenuItemElement);
+
+      if (item && !item.disabled) {
+        this.#updateItemFocusVisible(item, true, false);
+      }
+    }
+  }
+
+  /** @private */
+  #activateItem(item: M3eNavMenuItemElement): void {
+    this.setAttribute("aria-activedescendant", item.id);
+    if (item.label) {
+      scrollIntoViewIfNeeded(item.label, this, { block: "nearest", behavior: "smooth" });
+    }
+    this.#updateFocusVisible();
+  }
+
+  /** @private */
+  #updateFocusVisible(): void {
+    const focusWithin = this.matches(":focus-within");
+    const focused = focusWithin || this.matches(":focus");
+    const focusVisible =
+      focused &&
+      !this.#ignoreFocusVisible &&
+      (forcedColorsActive() ||
+        this.matches(":focus-visible") ||
+        (focusWithin && this.querySelector("a:focus-visible") !== null));
+
+    this[selectionManager].items.forEach((x) => {
+      const active = x === this[selectionManager].activeItem;
+      this.#updateItemFocusVisible(x, active && focused, active && focusVisible);
+    });
+  }
+
+  /** @private */
+  #updateItemFocusVisible(item: M3eNavMenuItemElement, focused: boolean, focusVisible: boolean): void {
+    if (focused && focusVisible) {
+      item.indicator?.show("focused");
+    } else {
+      item.indicator?.hide("focused");
+    }
+    if (focusVisible) {
+      item.focusRing?.show();
+    } else {
+      item.focusRing?.hide();
+    }
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-nav-menu": M3eNavMenuElement;
+  }
+}

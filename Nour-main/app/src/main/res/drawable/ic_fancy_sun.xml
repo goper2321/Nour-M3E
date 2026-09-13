@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Outer delicate rays -->
+    <!-- Cardinal rays -->
+    <path
+        android:strokeColor="#FBBF24"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M24,4 L24,9 M24,39 L24,44 M4,24 L9,24 M39,24 L44,24" />
+    <!-- Diagonal rays -->
+    <path
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M9.86,9.86 L13.4,13.4 M34.6,34.6 L38.14,38.14 M9.86,38.14 L13.4,34.6 M34.6,13.4 L38.14,9.86" />
+    <!-- Intermediate small rays -->
+    <path
+        android:strokeColor="#FDE68A"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:pathData="M16.34,6.72 L17.88,10.44 M30.12,37.56 L31.66,41.28 M6.72,16.34 L10.44,17.88 M37.56,30.12 L41.28,31.66 M31.66,6.72 L30.12,10.44 M17.88,37.56 L16.34,41.28 M41.28,16.34 L37.56,17.88 M10.44,30.12 L6.72,31.66" />
+    <!-- Outer halo ring -->
+    <path
+        android:strokeColor="#FEF3C7"
+        android:strokeWidth="1"
+        android:strokeAlpha="0.6"
+        android:pathData="M24,11 A13,13 0 1,1 23.99,11" />
+    <!-- Sun Body Disc -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M24,14 A10,10 0 1,1 23.99,14" />
+    <!-- Luminous Core -->
+    <path
+        android:fillColor="#FFFBEB"
+        android:pathData="M24,18 A6,6 0 1,1 23.99,18" />
+</vector>

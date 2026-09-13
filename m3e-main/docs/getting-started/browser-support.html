@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Browser Support for M3E</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Browser Support for M3E" />
+    <base href="./" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0"
+      rel="stylesheet"
+    />
+    <link href="../main.css" rel="stylesheet" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@m3e/web@2.7.12/dist/all.min.js"></script>
+    <script src="../main.js"></script>
+  </head>
+  <body>
+    <m3e-theme strong-focus></m3e-theme>
+    <div class="panes">
+      <m3e-content-pane id="body">
+        <m3e-heading variant="display" size="large" level="1">Browser Support</m3e-heading>
+        <p>
+          M3E supports the latest stable releases of all major evergreen browsers. Older versions may work but are not
+          actively tested.
+        </p>
+        <ul>
+          <li>Chrome</li>
+          <li>Edge (Chromium)</li>
+          <li>Firefox</li>
+          <li>Safari</li>
+          <li>Opera</li>
+        </ul>
+      </m3e-content-pane>
+    </div>
+  </body>
+</html>

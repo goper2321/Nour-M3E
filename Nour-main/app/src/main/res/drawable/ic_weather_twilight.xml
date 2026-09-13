@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Horizon Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.6"
+        android:pathData="M3,19 L21,19" />
+    <!-- Sub-horizon glow disk -->
+    <path
+        android:fillColor="#818CF8"
+        android:fillAlpha="0.7"
+        android:pathData="M8,19 C8,16.79 9.79,15 12,15 C14.21,15 16,16.79 16,19 Z" />
+    <!-- Evening / Morning Stars -->
+    <path
+        android:fillColor="#FDE68A"
+        android:pathData="M12,5 L12.6,6.9 L14.5,7.5 L12.6,8.1 L12,10 L11.4,8.1 L9.5,7.5 L11.4,6.9 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"
+        android:pathData="M18,10 L18.4,11.1 L19.5,11.5 L18.4,11.9 L18,13 L17.6,11.9 L16.5,11.5 L17.6,11.1 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"
+        android:pathData="M6,10 L6.3,10.8 L7.2,11 L6.3,11.2 L6,12 L5.7,11.2 L4.8,11 L5.7,10.8 Z" />
+</vector>

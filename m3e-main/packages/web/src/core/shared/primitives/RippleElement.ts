@@ -1,0 +1,296 @@
+import { css, CSSResultGroup, LitElement, PropertyValues, unsafeCSS } from "lit";
+import { property } from "lit/decorators.js";
+
+import { PressedController } from "../controllers";
+import { HtmlFor, Role } from "../mixins";
+import { DesignToken } from "../tokens";
+import { customElement } from "../decorators";
+
+import { RippleToken } from "./RippleToken";
+
+/**
+ * Connects user input to screen reactions using ripples.
+ *
+ * @description
+ * The `m3e-ripple` component is an absolute positioned element used to depict a ripple.
+ * The parenting element must be a relative positioned element.
+ *
+ * The component can be attached to an interactive element using the `for` attribute or programmatically using the `attach` method.
+ * The ripple is displayed when the interactive element is pressed and hidden when released.  This can be disabled using the `disabled` attribute.
+ *
+ * The pressed state actives either using both pointer and keyboard events. For keyboard events, `SPACE` activate a ripple.
+ *
+ * Alternatively, you can use the `show` and `hide` methods to programmatically control the ripple.
+ *
+ * @example
+ * The following example illustrates attaching a ripple to an interactive element. In this example, the parenting div
+ * has relative positioning and is given an `id` referenced by `m3e-ripple` using the `for` attribute.  Note that `#myDiv`
+ * is not used when specifying the attached element's identifier.  The `#` is inferred.
+ *
+ * ```html
+ * <div id="myDiv" tabindex="0" style="position: relative;">
+ *  <m3e-ripple for="myDiv"></m3e-ripple>
+ * <div>
+ * ```
+ *
+ * @tag m3e-ripple
+ *
+ * @attr centered - Whether the ripple always originates from the center of the element's bounds, rather than originating from the location of the click event.
+ * @attr disabled - Whether click events will not trigger the ripple.  Ripples can be still controlled manually by using the `show` and 'hide' methods.
+ * @attr for - The identifier of the interactive control to which this element is attached.
+ * @attr radius - The radius, in pixels, of the ripple.
+ * @attr unbounded - Whether the ripple is visible outside the element's bounds.
+ *
+ * @cssprop --m3e-ripple-color - The color of the ripple.
+ * @cssprop --m3e-ripple-enter-duration - The duration for the enter animation (expansion from point of contact).
+ * @cssprop --m3e-ripple-exit-duration - The duration for the exit animation (fade-out).
+ * @cssprop --m3e-ripple-opacity - The opacity of the ripple.
+ */
+@customElement("m3e-ripple")
+export class M3eRippleElement extends HtmlFor(Role(LitElement, "none")) {
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: block;
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      border-radius: inherit;
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    :host(:not([unbounded])) {
+      overflow: hidden;
+    }
+    :host(:not([unbounded])) .ripple {
+      contain: layout style paint;
+    }
+    :host([unbounded]) .ripple {
+      contain: layout style;
+    }
+    .ripple {
+      display: block;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transform: scale(0);
+      opacity: ${RippleToken.opacity};
+      border-radius: 50%;
+      filter: blur(20px);
+      background-color: ${RippleToken.color};
+      transition: ${unsafeCSS(
+        `background-color ${DesignToken.motion.duration.short1} ${DesignToken.motion.easing.standard}`,
+      )};
+      will-change: transform, background-color, opacity;
+      animation: ripple ${RippleToken.enterDuration} linear;
+    }
+    .ripple.persistent.pressed {
+      transform: scale(4);
+    }
+    .ripple.exit {
+      transition: ${unsafeCSS(
+        `opacity ${RippleToken.exitDuration} cubic-bezier(0, 0, 0.2, 0.1),
+        background-color ${DesignToken.motion.duration.short1} ${DesignToken.motion.easing.standard}`,
+      )};
+      opacity: 0;
+    }
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+      }
+    }
+    @media (prefers-reduced-motion) {
+      .ripple {
+        transform: scale(4);
+        animation-duration: 90ms;
+      }
+      .ripple:not(.exit),
+      .ripple.exit {
+        transition-duration: 10ms;
+      }
+    }
+    @media (forced-colors: active) {
+      .ripple {
+        display: none;
+      }
+    }
+  `;
+
+  /** @private */ readonly #ripples: Set<HTMLElement> = new Set();
+  /** @private */ readonly #pressedController = new PressedController(this, {
+    target: null,
+    minPressedDuration: 0,
+    isPressedKey: (key) => key === " ",
+    callback: (pressed, { x, y }) => this.#handlePressedChange(pressed, x, y),
+  });
+
+  /**
+   * Whether click events will not trigger the ripple.
+   * Ripples can be still controlled manually by using the `show` and 'hide' methods.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /**
+   * Whether the ripple always originates from the center of the element's bounds, rather
+   * than originating from the location of the click event.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) centered = false;
+
+  /**
+   * Whether the ripple is visible outside the element's bounds.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) unbounded = false;
+
+  /**
+   * The radius, in pixels, of the ripple.
+   * @default null
+   */
+  @property({ type: Number }) radius: number | null = null;
+
+  /** Whether the ripple is currently visible to the user. */
+  get visible() {
+    return this.#ripples.size > 0;
+  }
+
+  /**
+   * Launches a manual ripple.
+   * @param {number} x The x-coordinate, relative to the viewport, at which to present the ripple.
+   * @param {number} y The y-coordinate, relative to the viewport, at which to present the ripple.
+   * @param {boolean} [persistent=false] Whether the ripple will persist until hidden.
+   */
+  show(x: number, y: number, persistent: boolean = false): void {
+    const bounds = this.getBoundingClientRect();
+    if (this.centered) {
+      x = bounds.left + bounds.width / 2;
+      y = bounds.top + bounds.height / 2;
+    }
+
+    let radius = this.radius;
+
+    if (!radius || isNaN(radius)) {
+      const distX = Math.max(Math.abs(x - bounds.left), Math.abs(x - bounds.right));
+      const distY = Math.max(Math.abs(y - bounds.top), Math.abs(y - bounds.bottom));
+      radius = Math.sqrt(distX * distX + distY * distY);
+    }
+
+    const offsetX = x - bounds.left;
+    const offsetY = y - bounds.top;
+
+    const ripple = document.createElement("div");
+    ripple.classList.add("ripple");
+    if (persistent) {
+      ripple.classList.add("persistent");
+    }
+
+    ripple.style.left = `${offsetX - radius}px`;
+    ripple.style.top = `${offsetY - radius}px`;
+    ripple.style.width = `${radius * 2}px`;
+    ripple.style.height = `${radius * 2}px`;
+
+    ripple.addEventListener("animationend", () => this.#handleAnimationEnd(ripple, persistent), { once: true });
+    ripple.addEventListener(
+      "transitionend",
+      (e) => {
+        if (e.propertyName === "opacity") {
+          this.#destroyRipple(ripple);
+        }
+      },
+      { once: true },
+    );
+
+    if (!this.shadowRoot) {
+      this.#ripples.delete(ripple);
+      return;
+    }
+    this.#ripples.add(ripple);
+    this.shadowRoot.appendChild(ripple);
+  }
+
+  /** Manually hides the ripple. */
+  hide(): void {
+    for (const ripple of this.#ripples) {
+      ripple.classList.add("exit");
+    }
+  }
+
+  /** @inheritdoc */
+  override attach(control: HTMLElement): void {
+    super.attach(control);
+    this.#pressedController.observe(control);
+  }
+
+  /** @inheritdoc */
+  override detach(): void {
+    if (this.control) {
+      this.#pressedController.unobserve(this.control);
+    }
+    super.detach();
+  }
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    this.ariaHidden = "true";
+    super.connectedCallback();
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#destroyRipple();
+  }
+
+  /** @inheritdoc */
+  protected override updated(_changedProperties: PropertyValues<this>): void {
+    super.updated(_changedProperties);
+
+    if (_changedProperties.has("disabled") && this.disabled) {
+      this.hide();
+    }
+  }
+
+  /** @private */
+  #destroyRipple(ripple?: HTMLElement): void {
+    if (ripple) {
+      ripple.remove();
+      this.#ripples.delete(ripple);
+    } else {
+      for (const r of this.#ripples) {
+        r.remove();
+      }
+      this.#ripples.clear();
+    }
+  }
+
+  /** @private */
+  #handleAnimationEnd(ripple: HTMLElement, persistent: boolean): void {
+    if (persistent) {
+      ripple.classList.add("pressed");
+    } else {
+      ripple.classList.add("exit");
+    }
+  }
+
+  /** @private */
+  #handlePressedChange(pressed: boolean, x: number, y: number): void {
+    if (!this.disabled) {
+      if (pressed) {
+        this.show(x, y, true);
+      } else {
+        this.hide();
+      }
+    }
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-ripple": M3eRippleElement;
+  }
+}

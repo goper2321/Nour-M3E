@@ -1,0 +1,808 @@
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
+import { css, CSSResultGroup, html, LitElement, PropertyValues } from "lit";
+import { property, query } from "lit/decorators.js";
+
+import {
+  AttachInternals,
+  Labelled,
+  ConstraintValidation,
+  Dirty,
+  Disabled,
+  FormAssociated,
+  Required,
+  RequiredConstraintValidation,
+  Touched,
+  DesignToken,
+  formValue,
+  M3eFocusRingElement,
+  scrollIntoViewIfNeeded,
+  Role,
+  Focusable,
+  prefersReducedMotion,
+  forcedColorsActive,
+  deleteCustomState,
+  addCustomState,
+  setCustomState,
+  customElement,
+  MutationController,
+  ReconnectedCallback,
+} from "@m3e/web/core";
+
+import { ListKeyManager } from "@m3e/web/core/a11y";
+
+import type { M3eFormFieldElement, FormFieldControl } from "@m3e/web/form-field";
+import { M3eOptionElement, M3eOptionPanelElement } from "@m3e/web/option";
+
+/**
+ * A form control that allows users to select a value from a set of predefined options.
+ *
+ * @description
+ * The `m3e-select` component follows Material Design 3 principles and provides a comprehensive
+ * selection interface for capturing user input. It supports both single and multiple selection modes,
+ * customizable validation states, and accessible keyboard navigation. The component integrates seamlessly
+ * with form field containers and dynamically positions its option list menu to ensure optimal viewport
+ * visibility. Selection changes are communicated through standard form events, enabling predictable integration
+ * with form submission and reactive state management systems.
+ *
+ * @example
+ * The following demonstrates a `m3e-select` component wrapped in a `m3e-form-field` with a slotted label.
+ * The label is associated with the select via the `for` and `id` attributes, ensuring accessible form semantics.
+ * Each `m3e-option` defines an option within the dropdown.
+ *
+ * ```html
+ * <m3e-form-field>
+ *   <label slot="label" for="select">Choose your favorite fruit</label>
+ *   <m3e-select id="select">
+ *     <m3e-option>Apples</m3e-option>
+ *     <m3e-option>Oranges</m3e-option>
+ *     <m3e-option>Bananas</m3e-option>
+ *     <m3e-option>Grapes</m3e-option>
+ *   </m3e-select>
+ * </m3e-form-field>
+ * ```
+ *
+ * @tag m3e-select
+ *
+ * @slot - Renders the options of the select.
+ * @slot arrow - Renders the dropdown arrow.
+ * @slot value - Renders the selected value(s).
+ *
+ * @attr disabled - Whether the element is disabled.
+ * @attr hide-selection-indicator - Whether to hide the selection indicator for single select options.
+ * @attr multi - Whether multiple options can be selected.
+ * @attr name - The name that identifies the element when submitting the associated form.
+ * @attr panel-class - Class or list of classes to be applied to the select's overlay panel.
+ * @attr required - Whether the element is required.
+ *
+ * @fires beforeinput - Dispatched before the selected state changes.
+ * @fires input - Dispatched when the selected state changes.
+ * @fires change - Dispatched when the selected state changes.
+ *
+ * @cssprop --m3e-form-field-font-size - The font size of the select control.
+ * @cssprop --m3e-form-field-font-weight - The font weight of the select control.
+ * @cssprop --m3e-form-field-line-height - The line height of the select control.
+ * @cssprop --m3e-form-field-tracking - The letter spacing of the select control.
+ * @cssprop --m3e-select-container-shape - The corner radius of the select container.
+ * @cssprop --m3e-select-disabled-color - The text color when the select is disabled.
+ * @cssprop --m3e-select-disabled-color-opacity - The opacity level applied to the disabled text color.
+ * @cssprop --m3e-select-icon-size - The size of the dropdown arrow icon.
+ */
+@customElement("m3e-select")
+export class M3eSelectElement
+  extends ReconnectedCallback(
+    Focusable(
+      Labelled(
+        RequiredConstraintValidation(
+          Dirty(
+            Touched(
+              Required(ConstraintValidation(FormAssociated(Disabled(AttachInternals(Role(LitElement, "combobox")))))),
+            ),
+          ),
+        ),
+      ),
+    ),
+  )
+  implements FormFieldControl
+{
+  /** The styles of the element. */
+  static override styles: CSSResultGroup = css`
+    :host {
+      display: inline-flex;
+      vertical-align: middle;
+      outline: none;
+      position: relative;
+      font-size: var(--m3e-form-field-font-size, ${DesignToken.typescale.standard.body.large.fontSize});
+      font-weight: var(--m3e-form-field-font-weight, ${DesignToken.typescale.standard.body.large.fontWeight});
+      line-height: var(--m3e-form-field-line-height, ${DesignToken.typescale.standard.body.large.lineHeight});
+      letter-spacing: var(--m3e-form-field-tracking, ${DesignToken.typescale.standard.body.large.tracking});
+      min-height: var(--m3e-form-field-line-height, ${DesignToken.typescale.standard.body.large.lineHeight});
+      border-radius: var(--m3e-select-container-shape, ${DesignToken.shape.corner.extraSmall});
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    :host(:not(:disabled)) {
+      cursor: pointer;
+    }
+    :host(:disabled) {
+      color: color-mix(
+        in srgb,
+        var(--m3e-select-disabled-color, ${DesignToken.color.onSurface}) var(--m3e-select-disabled-color-opacity, 38%),
+        transparent
+      );
+    }
+    .options {
+      display: none;
+    }
+    .base {
+      flex: 1 1 auto;
+      display: inline-flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .arrow-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: var(--_select-arrow-margin-top);
+    }
+    ::slotted([slot="arrow"]),
+    .arrow {
+      vertical-align: middle;
+      width: 1em;
+      height: 1em;
+      font-size: var(--m3e-select-icon-size, 24px);
+    }
+    :host(:is(:state(--open), :--open)) .focus-ring {
+      display: none;
+    }
+  `;
+
+  /** @private */ static __nextId = 0;
+
+  /** @private */ private _options = new Array<M3eOptionElement>();
+  /** @private */ #clone?: HTMLElement;
+  /** @private */ #slot?: HTMLSlotElement | null;
+
+  /** @private */ #menu?: M3eOptionPanelElement;
+  /** @private */ #ignoreKeyUp = false;
+  /** @private */ #ignoreFocusVisible = false;
+
+  /** @private */ readonly #id = `m3e-select-${M3eSelectElement.__nextId++}`;
+  /** @private */ readonly #listId = `${this.#id}-list`;
+
+  /** @private */ readonly #clickHandler = (e: Event) => this.#handleClick(e);
+  /** @private */ readonly #keyDownHandler = (e: KeyboardEvent) => this.#handleKeyDown(e);
+  /** @private */ readonly #keyUpHandler = (e: KeyboardEvent) => this.#handleKeyUp(e);
+  /** @private */ readonly #menuToggleHandler = (e: ToggleEvent) => this.#handleMenuToggle(e);
+  /** @private */ readonly #menuPointerDownHandler = (e: PointerEvent) => this.#handleMenuPointerDown(e);
+  /** @private */ readonly #menuPointerUpHandler = (e: PointerEvent) => this.#handleMenuPointerUp(e);
+  /** @private */ readonly #slotChangeHandler = () => this.#handleMutation();
+  /** @private */ #menuPressedOption?: M3eOptionElement;
+
+  /** @private */ private readonly _listKeyManager = new ListKeyManager<M3eOptionElement>()
+    .withWrap()
+    .withHomeAndEnd()
+    .withPageUpAndDown()
+    .withVerticalOrientation()
+    .withTypeahead()
+    .onActiveItemChange(() => {
+      if (this._listKeyManager.activeItem) {
+        this.#activateOption(this._listKeyManager.activeItem);
+      }
+    });
+
+  /** @private */ @query(".focus-ring") private readonly _focusRing?: M3eFocusRingElement;
+
+  /** @private */ readonly #mutationController = new MutationController(this, {
+    target: null,
+    config: {
+      childList: true,
+      subtree: true,
+    },
+    callback: () => this.#handleMutation(),
+  });
+
+  /**
+   * Whether to hide the selection indicator for single select options.
+   * @default false
+   */
+  @property({ attribute: "hide-selection-indicator", type: Boolean }) hideSelectionIndicator = false;
+
+  /**
+   * Whether multiple options can be selected.
+   * @default false
+   */
+  @property({ type: Boolean }) multi = false;
+
+  /**
+   * Class or list of classes to be applied to the select's overlay panel.
+   * @default ""
+   */
+  @property({ attribute: "panel-class" }) panelClass = "";
+
+  get #options(): readonly M3eOptionElement[] {
+    return this._listKeyManager?.items ?? [];
+  }
+
+  get #selected(): readonly M3eOptionElement[] {
+    return this.#options.filter((x) => x.selected);
+  }
+
+  /** The options that can be selected. */
+  get options(): readonly M3eOptionElement[] {
+    return this._options ?? [];
+  }
+
+  /** The selected option(s). */
+  get selected(): readonly M3eOptionElement[] {
+    return this.options.filter((x) => x.selected);
+  }
+
+  /** The selected (enabled) value(s). */
+  get value(): string | readonly string[] | null {
+    const values = this.selected.filter((x) => !x.disabled).map((x) => x.value);
+    switch (values.length) {
+      case 0:
+        return null;
+      case 1:
+        return values[0];
+      default:
+        return values;
+    }
+  }
+
+  /** @inheritdoc @internal */
+  override get [formValue]() {
+    const values = this.value;
+    if (Array.isArray(values)) {
+      const data = new FormData();
+      for (const value of values) {
+        data.append(this.name, value);
+      }
+      return data;
+    }
+    return <string | null>values;
+  }
+
+  /** @inheritdoc */
+  get shouldLabelFloat(): boolean {
+    return this.selected.filter((x) => !x.isEmpty).length > 0;
+  }
+
+  /** @private */
+  get #formField(): M3eFormFieldElement | null {
+    return this.closest("m3e-form-field");
+  }
+
+  /** @inheritdoc */
+  onContainerClick(): void {
+    this.#ignoreFocusVisible = true;
+    this.#toggleMenu();
+    this.focus({ preventScroll: true });
+  }
+
+  /**
+   * Clears the value of the element.
+   * @param [restoreFocus=false] Whether to restore input focus.
+   */
+  clear(restoreFocus = false): void {
+    const selected = this.#selected;
+    const willChange = selected.length > 0;
+
+    if (willChange) {
+      selected.forEach((x) => {
+        x.selected = false;
+        this.#updateSelectionState(x);
+      });
+      this.requestUpdate();
+    }
+
+    this.#hideMenu();
+
+    if (willChange) {
+      this.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (restoreFocus) {
+      this.focus();
+    }
+  }
+
+  /** @inheritdoc */
+  override connectedCallback(): void {
+    super.connectedCallback();
+
+    this.ariaHasPopup = "listbox";
+    this.ariaExpanded = "false";
+
+    this.addEventListener("click", this.#clickHandler);
+    this.addEventListener("keydown", this.#keyDownHandler);
+    this.addEventListener("keyup", this.#keyUpHandler);
+  }
+
+  /** @inheritdoc */
+  override reconnectedCallback(): void {
+    super.reconnectedCallback();
+    this.#initMutation();
+  }
+
+  /** @inheritdoc */
+  override disconnectedCallback(): void {
+    this.#removeMenu();
+
+    super.disconnectedCallback();
+
+    this.removeEventListener("click", this.#clickHandler);
+    this.removeEventListener("keydown", this.#keyDownHandler);
+    this.removeEventListener("keyup", this.#keyUpHandler);
+  }
+
+  /** @inheritdoc */
+  protected override update(changedProperties: PropertyValues<this>): void {
+    super.update(changedProperties);
+
+    if (changedProperties.has("hideSelectionIndicator")) {
+      this.#options.forEach((x) => setCustomState(x, "--hide-selection-indicator", this.hideSelectionIndicator));
+    }
+  }
+
+  /** @inheritdoc */
+  protected override firstUpdated(_changedProperties: PropertyValues<this>): void {
+    super.firstUpdated(_changedProperties);
+
+    this._focusRing?.attach(this);
+
+    if (this.#formField && this._focusRing) {
+      this._focusRing.style.display = "none";
+    }
+
+    this.#initMutation();
+  }
+
+  /** @inheritdoc */
+  protected override render(): unknown {
+    return html` <m3e-focus-ring class="focus-ring"></m3e-focus-ring>
+      <div class="base">
+        <m3e-text-overflow>
+          <slot name="value">
+            ${this.selected
+              .filter((x) => !x.isEmpty)
+              .map((x, i) => (i > 0 ? html`<span>, </span>${x.label}` : x.label))}
+          </slot>
+        </m3e-text-overflow>
+        <div class="arrow-wrapper" aria-hidden="true">
+          <slot name="arrow">
+            <svg class="arrow" viewBox="0 -960 960 960" fill="currentColor">
+              <path d="M480-360 280-560h400L480-360Z" />
+            </svg>
+          </slot>
+        </div>
+      </div>
+      <div class="options" aria-hidden="true" @state-change=${this.#handleOptionStateChange}>
+        <slot></slot>
+      </div>`;
+  }
+
+  /** @private */
+  #initMutation(): void {
+    this.#slot?.removeEventListener("slotchange", this.#slotChangeHandler);
+    this.#mutationController.hostDisconnected();
+    this.#slot = this.querySelector<HTMLSlotElement>("slot:not([name])");
+    if (this.#slot) {
+      this.#slot.addEventListener("slotchange", this.#slotChangeHandler);
+      this.#mutationController.observe(this.#slot);
+    } else {
+      this.#mutationController.observe(this);
+    }
+    this.#handleMutation();
+  }
+
+  /** @private */
+  #handleOptionStateChange(e: Event): void {
+    if (!(e.target instanceof M3eOptionElement)) return;
+    e.stopImmediatePropagation();
+
+    const index = this.options.indexOf(e.target);
+    if (index == -1) return;
+
+    const clone = this.#options[index];
+    if (!clone) return;
+
+    clone.disabled = e.target.disabled;
+
+    if (clone.selected === e.target.selected) return;
+
+    clone.selected = e.target.selected;
+
+    if (!this.isUpdatePending) {
+      this.requestUpdate();
+    }
+
+    this.#formField?.notifyControlStateChange(true);
+  }
+
+  /** @private */
+  #handleMutation(): void {
+    const slot = this.querySelector<HTMLSlotElement>("slot:not([name])");
+    const slotted = slot?.assignedElements({ flatten: true });
+
+    this.#clone = <HTMLElement>this.cloneNode(true);
+
+    if (slotted) {
+      const clonedSlot = this.#clone.querySelector<HTMLSlotElement>("slot:not([name])");
+      if (clonedSlot) {
+        clonedSlot.replaceWith(...slotted.map((x) => x.cloneNode(true)));
+      }
+    }
+
+    const { added } = this._listKeyManager.setItems([...this.#clone.querySelectorAll("m3e-option")]);
+    added.forEach((x) => {
+      x.id = x.id || `${this.#id}-option-${this._listKeyManager.items.indexOf(x)}`;
+      setCustomState(x, "--hide-selection-indicator", this.hideSelectionIndicator);
+    });
+
+    this._options = slotted
+      ? slotted.filter((x) => x instanceof M3eOptionElement)
+      : [...this.querySelectorAll("m3e-option")];
+
+    this.#formField?.notifyControlStateChange();
+    if (this.#menu) {
+      this.#menu.replaceChildren(...this.#clone.childNodes);
+      if (this._options.length == 0) {
+        this.#hideMenu();
+      }
+    }
+  }
+
+  /** @private */
+  #handleClick(e: Event): void {
+    if (e.defaultPrevented || this.disabled) return;
+    this.#toggleMenu();
+  }
+
+  /** @private */
+  #handleKeyDown(e: KeyboardEvent): void {
+    if (e.defaultPrevented) return;
+    this.#ignoreFocusVisible = false;
+
+    switch (e.key) {
+      case " ":
+      case "Enter":
+        e.preventDefault();
+        if (!this.multi) {
+          if (this.#menu && this._listKeyManager.activeItem) {
+            this.#selectOption(this._listKeyManager.activeItem);
+          }
+          if (this.#menu?.isOpen) {
+            if (!prefersReducedMotion()) {
+              setTimeout(() => this.#hideMenu(), 150);
+            } else {
+              this.#hideMenu();
+            }
+          } else {
+            this.#showMenu();
+          }
+        } else if (!this.#menu) {
+          this.#ignoreKeyUp = true;
+          this.#toggleMenu();
+        }
+
+        break;
+
+      case "Escape":
+      case "Tab":
+        this.#hideMenu();
+        break;
+
+      case "Down":
+      case "ArrowDown":
+        if (this.multi && !this.#menu) {
+          this.#toggleMenu();
+        } else {
+          this._listKeyManager.onKeyDown(e);
+          if (!this.#menu && this._listKeyManager.activeItem) {
+            this.#selectOption(this._listKeyManager.activeItem);
+          }
+        }
+        break;
+
+      default:
+        this._listKeyManager.onKeyDown(e);
+        if (!this.multi && !this.#menu && this._listKeyManager.activeItem) {
+          this.#selectOption(this._listKeyManager.activeItem);
+        }
+        break;
+    }
+  }
+
+  /** @private */
+  #handleKeyUp(e: KeyboardEvent): void {
+    if (e.defaultPrevented) return;
+
+    if (this.#ignoreKeyUp) {
+      this.#ignoreKeyUp = false;
+      return;
+    }
+
+    switch (e.key) {
+      case " ":
+      case "Enter":
+        if (!this.multi) return;
+        e.preventDefault();
+        if (this.#menu && this._listKeyManager.activeItem) {
+          this.#selectOption(this._listKeyManager.activeItem);
+        }
+        break;
+    }
+  }
+
+  /** @private */
+  #handleMenuPointerDown(e: PointerEvent): void {
+    this.#menuPressedOption = undefined;
+
+    if (e.button === 2) return;
+    // Prevent click to avoid stealing focus.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const option = <M3eOptionElement | undefined>(
+      e.composedPath().find((x) => x instanceof HTMLElement && x.tagName === "M3E-OPTION")
+    );
+
+    if (option && !option.disabled) {
+      this.#menuPressedOption = option;
+    }
+  }
+
+  /** @private */
+  #handleMenuPointerUp(e: PointerEvent): void {
+    const pressedOption = this.#menuPressedOption;
+    this.#menuPressedOption = undefined;
+
+    if (e.button === 2) return;
+
+    if (!pressedOption) return;
+
+    const option = <M3eOptionElement | undefined>(
+      e.composedPath().find((x) => x instanceof HTMLElement && x.tagName === "M3E-OPTION")
+    );
+
+    if (option === pressedOption) {
+      this.#selectOption(option);
+      this._listKeyManager.setActiveItem(option);
+      if (this.multi) {
+        this.requestUpdate();
+      }
+    }
+
+    if (!this.multi) {
+      if (!prefersReducedMotion()) {
+        setTimeout(() => this.#hideMenu(), 150);
+      } else {
+        this.#hideMenu();
+      }
+    }
+  }
+
+  /** @private */
+  #handleMenuToggle(e: ToggleEvent): void {
+    if (!this.#menu) return;
+
+    if (e.newState !== "closed") {
+      const option = this.#selected.find((x) => !x.disabled) ?? this._listKeyManager.items.find((x) => !x.disabled);
+      this._listKeyManager.setActiveItem(option);
+      if (option) {
+        scrollIntoViewIfNeeded(option, this.#menu, { block: "nearest", behavior: "instant" });
+      }
+      this.dispatchEvent(
+        new ToggleEvent("toggle", {
+          oldState: e.oldState,
+          newState: e.newState,
+        }),
+      );
+    } else {
+      if (prefersReducedMotion()) {
+        this.#destroyMenu(e);
+      } else {
+        // NOTE: use transitionend is preferred but doesn't fire when used here.
+        // This is a workaround until that is fixed.
+        setTimeout(() => this.#destroyMenu(e), 100);
+      }
+    }
+  }
+
+  /** @private */
+  #removeMenu(): void {
+    if (!this.#menu) return;
+    this.#clone?.replaceChildren(...this.#menu.childNodes);
+    this.#menu.remove();
+    this.#menu.removeEventListener("toggle", this.#menuToggleHandler);
+    this.#menu.removeEventListener("pointerdown", this.#menuPointerDownHandler);
+    this.#menu.removeEventListener("pointerup", this.#menuPointerUpHandler);
+    this.#menu = undefined;
+
+    this.ariaExpanded = "false";
+    this.removeAttribute("aria-controls");
+    this.removeAttribute("aria-activedescendant");
+
+    deleteCustomState(this, "--open");
+  }
+
+  /** @private */
+  #destroyMenu(e: ToggleEvent): void {
+    if (!this.#menu) return;
+
+    this.#removeMenu();
+    this.requestUpdate();
+
+    this.#formField?.notifyControlStateChange();
+
+    this.dispatchEvent(
+      new ToggleEvent("toggle", {
+        oldState: e.oldState,
+        newState: e.newState,
+      }),
+    );
+  }
+
+  /** @private */
+  #toggleMenu(): void {
+    if (this.disabled) return;
+    if (this.#menu) {
+      this.#hideMenu();
+    } else {
+      this.#showMenu();
+    }
+  }
+
+  /** @private */
+  #showMenu(): void {
+    if (this.#menu || this._options.length == 0) return;
+
+    this.#menu = document.createElement("m3e-option-panel");
+    if (this.multi) {
+      this.#menu.ariaMultiSelectable = "true";
+    }
+
+    this.#menu.id = this.#listId;
+
+    if (this.panelClass) {
+      for (const klass of this.panelClass
+        .split(/\s+/)
+        .map((d) => d.trim())
+        .filter(Boolean)) {
+        this.#menu.classList.add(klass);
+      }
+    }
+
+    this.#menu.style.overflowX = "hidden";
+    this.#menu.fitAnchorWidth = true;
+    this.#menu.addEventListener("toggle", this.#menuToggleHandler);
+    this.#menu.addEventListener("pointerdown", this.#menuPointerDownHandler);
+    this.#menu.addEventListener("pointerup", this.#menuPointerUpHandler);
+
+    if (this.#clone) {
+      this.#menu.replaceChildren(...this.#clone.childNodes);
+    }
+
+    // Mount the panel into the nearest popover or dialog host so it remains inside
+    // the active interaction subtree. Popover and dialog semantics require this.
+    // If no such host exists, fall back to <body> to avoid framework diffing.
+    // NOTE: Frameworks may still interfere when mounted inside their managed DOM,
+    // but there is no solution that satisfies all constraints.
+
+    const host =
+      this.closest("[popover]") ?? this.closest("dialog[open]") ?? this.closest("m3e-dialog") ?? document.body;
+
+    host.appendChild(this.#menu);
+
+    this.ariaExpanded = "true";
+    this.setAttribute("aria-controls", this.#listId);
+    this.#formField?.notifyControlStateChange();
+
+    setTimeout(() => {
+      this.#menu?.show(this, this.#formField?.menuAnchor);
+      addCustomState(this, "--open");
+    });
+  }
+
+  /** @private */
+  #hideMenu(): void {
+    if (!this.#menu) return;
+
+    this.#menu.hide();
+    deleteCustomState(this, "--open");
+  }
+
+  /** @private */
+  #activateOption(option: M3eOptionElement): void {
+    this.setAttribute("aria-activedescendant", option.id);
+    if (this.#menu) {
+      scrollIntoViewIfNeeded(option, this.#menu, { block: "nearest", behavior: "instant" });
+
+      const focusVisible = !this.#ignoreFocusVisible && (this.matches(":focus-visible") || forcedColorsActive());
+
+      this.#options.forEach((x) => {
+        const active = x === option && focusVisible;
+        if (active) {
+          x.focusRing?.show();
+          x.stateLayer?.show("focused");
+        } else {
+          x.focusRing?.hide();
+          x.stateLayer?.hide("focused");
+        }
+      });
+    }
+  }
+
+  /** @private */
+  #updateSelectionState(clone: M3eOptionElement): void {
+    const option = this._options[this._listKeyManager.items.indexOf(clone)];
+    if (option) {
+      option.selected = clone.selected;
+    }
+  }
+
+  /** @private */
+  #selectOption(option: M3eOptionElement): void {
+    const selected = this.multi ? !option.selected : true;
+    if (option.selected === selected) return;
+
+    if (this.dispatchEvent(new Event("beforeinput", { bubbles: true, cancelable: true }))) {
+      option.selected = selected;
+      this.#updateSelectionState(option);
+
+      if (!this.multi) {
+        this.#selected
+          .filter((x) => x !== option)
+          .forEach((x) => {
+            x.selected = false;
+            this.#updateSelectionState(x);
+          });
+      }
+
+      this.requestUpdate();
+      this.#formField?.notifyControlStateChange();
+
+      this.dispatchEvent(new Event("input", { bubbles: true }));
+      this.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+}
+
+interface M3eSelectElementEventMap extends HTMLElementEventMap {
+  toggle: ToggleEvent;
+}
+
+export interface M3eSelectElement {
+  addEventListener<K extends keyof M3eSelectElementEventMap>(
+    type: K,
+    listener: (this: M3eSelectElement, ev: M3eSelectElementEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+
+  removeEventListener<K extends keyof M3eSelectElementEventMap>(
+    type: K,
+    listener: (this: M3eSelectElement, ev: M3eSelectElementEventMap[K]) => void,
+    options?: boolean | EventListenerOptions,
+  ): void;
+
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ): void;
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "m3e-select": M3eSelectElement;
+  }
+}
