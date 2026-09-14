@@ -12,8 +12,11 @@ import androidx.compose.ui.platform.LocalContext
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MyApplicationTheme(
+    // M3E theme port: m3e-theme variant="monochrome" with expressive motion.
+    // Monochrome is the default identity (see Color.kt Light/DarkColorScheme);
+    // dynamic color stays opt-in so both apps share one tonal language.
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true, // Use Material You dynamic color on Android 12+, monochrome fallback below
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

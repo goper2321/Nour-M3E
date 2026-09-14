@@ -5,31 +5,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.PermanentNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,12 +38,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.features.adhan.scheduler.PrayerNotificationScheduler
 import com.example.features.prayer.calculation.PrayerCalculationEngine
 import com.example.features.prayer.models.CalculationMethod
@@ -56,20 +55,59 @@ import com.example.features.prayer.ui.PrayerScreen
 import com.example.features.qibla.ui.QiblaScreen
 import com.example.features.quran.ui.QuranScreen
 import com.example.features.settings.ui.SettingsScreen
+import com.example.ui.m3e.M3EAppBar
+import com.example.ui.m3e.M3EAppBarSize
+import com.example.ui.m3e.M3EDrawerHeadline
+import com.example.ui.m3e.M3ENavBar
+import com.example.ui.m3e.M3ENavDrawerContent
+import com.example.ui.m3e.M3ENavItem
+import com.example.ui.m3e.M3ENavRail
+import com.example.ui.m3e.M3EWindowSize
+import com.example.ui.m3e.rememberM3EWindowSize
 import com.example.ui.theme.MyApplicationTheme
 import java.util.Date
 
+/**
+ * M3E app shell — port of m3e nav-bar / nav-rail / drawer-container + app-bar.
+ *
+ * - Compact (<600dp): small centered app bar + bottom nav bar (3-5 destinations)
+ * - Medium (600-840dp): small app bar + side nav rail
+ * - Expanded (>840dp): small app bar + permanent navigation drawer
+ * Screen transitions use the shared expressive spring (m3e motion scheme).
+ */
 enum class NourNavDestination(
+    val route: String,
     val title: String,
+    val subtitle: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
     val testTag: String
 ) {
-    SALAH("Salah", Icons.Filled.Notifications, Icons.Outlined.Notifications, "nav_salah"),
-    QIBLA("Qibla", Icons.Filled.LocationOn, Icons.Outlined.LocationOn, "nav_qibla"),
-    QURAN("Qur'an", Icons.Filled.DateRange, Icons.Outlined.DateRange, "nav_quran"),
-    SETTINGS("Settings", Icons.Filled.Settings, Icons.Outlined.Settings, "nav_settings")
+    SALAH(
+        "salah", "Salah Times", "Prayer timetable & countdown",
+        Icons.Filled.Schedule, Icons.Outlined.Schedule, "nav_salah"
+    ),
+    QIBLA(
+        "qibla", "Qibla", "Direction & distance",
+        Icons.Filled.Explore, Icons.Outlined.Explore, "nav_qibla"
+    ),
+    QURAN(
+        "quran", "The Noble Qur'an", "Surahs • Mushaf • Saved",
+        Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_quran"
+    ),
+    SETTINGS(
+        "settings", "Settings", "Calculation & Adhan",
+        Icons.Filled.Settings, Icons.Outlined.Settings, "nav_settings"
+    )
 }
+
+private fun NourNavDestination.toM3E(): M3ENavItem = M3ENavItem(
+    route = route,
+    label = if (route == "quran") "Qur'an" else title.substringBefore(" "),
+    selectedIcon = selectedIcon,
+    unselectedIcon = unselectedIcon,
+    testTag = testTag
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,13 +121,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NourMainApp() {
     val context = LocalContext.current
 
     var currentDestination by remember { mutableStateOf(NourNavDestination.SALAH) }
 
-    // User Prayer Settings state
+    // User Prayer Settings state (business logic preserved verbatim)
     var userLocation by remember {
         mutableStateOf(UserLocation(21.4225, 39.8262, "Makkah", "Saudi Arabia", 3.0))
     }
@@ -117,65 +156,44 @@ fun NourMainApp() {
         }
     }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("nour_main_scaffold"),
-        bottomBar = {
-            NavigationBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("nour_bottom_navigation"),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 0.dp
-            ) {
-                NourNavDestination.values().forEach { destination ->
-                    val isSelected = currentDestination == destination
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = { currentDestination = destination },
-                        icon = {
-                            Icon(
-                                imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
-                                contentDescription = destination.title
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = destination.title,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        modifier = Modifier.testTag(destination.testTag)
-                    )
-                }
-            }
+    val navItems = remember { NourNavDestination.values().map { it.toM3E() } }
+    val onSelectNav: (M3ENavItem) -> Unit = { item ->
+        NourNavDestination.values().firstOrNull { it.route == item.route }?.let {
+            currentDestination = it
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val windowSize = rememberM3EWindowSize(maxWidth)
+        val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+
+        // Quran manages its own reader chrome; shell app bar stays for top-level
+        // destinations and collapses gracefully via pinned scroll behavior.
+        val appBarSubtitle = when (currentDestination) {
+            NourNavDestination.SALAH -> "${userLocation.cityName} • ${calculationMethod.title.substringBefore(" (")}"
+            NourNavDestination.QIBLA -> "${userLocation.cityName} → Kaaba, Makkah"
+            NourNavDestination.QURAN -> currentDestination.subtitle
+            NourNavDestination.SETTINGS -> currentDestination.subtitle
+        }
+
+        val content: @Composable () -> Unit = {
             AnimatedContent(
                 targetState = currentDestination,
                 transitionSpec = {
                     val enter = scaleIn(
-                        initialScale = 0.92f,
-                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f)
+                        initialScale = 0.96f,
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = 0.8f, stiffness = 380f
+                        )
                     ) + fadeIn(
-                        animationSpec = spring(dampingRatio = 1f, stiffness = 1600f)
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = 1f, stiffness = 1600f
+                        )
                     )
                     val exit = fadeOut(
-                        animationSpec = spring(dampingRatio = 1f, stiffness = 1600f)
+                        animationSpec = androidx.compose.animation.core.spring(
+                            dampingRatio = 1f, stiffness = 1600f
+                        )
                     )
                     enter togetherWith exit
                 },
@@ -213,6 +231,118 @@ fun NourMainApp() {
                             onAdjustmentsChange = { adjustments = it }
                         )
                     }
+                }
+            }
+        }
+
+        when (windowSize) {
+            M3EWindowSize.Expanded -> {
+                PermanentNavigationDrawer(
+                    drawerContent = {
+                        M3ENavDrawerContent(
+                            items = navItems,
+                            selectedRoute = currentDestination.route,
+                            onSelect = onSelectNav,
+                            headline = {
+                                M3EDrawerHeadline(
+                                    title = "Nour • نور",
+                                    subtitle = "Islamic Companion"
+                                )
+                            },
+                            modifier = Modifier.fillMaxHeight()
+                        )
+                    }
+                ) {
+                    Scaffold(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .testTag("nour_main_scaffold"),
+                        topBar = {
+                            M3EAppBar(
+                                title = currentDestination.title,
+                                subtitle = appBarSubtitle,
+                                size = M3EAppBarSize.Small,
+                                scrollBehavior = scrollBehavior,
+                                testTag = "nour_top_app_bar"
+                            )
+                        }
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) { content() }
+                    }
+                }
+            }
+            M3EWindowSize.Medium -> {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    M3ENavRail(
+                        items = navItems,
+                        selectedRoute = currentDestination.route,
+                        onSelect = onSelectNav,
+                        header = {
+                            Text(
+                                text = "ن",
+                                style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            )
+                        }
+                    )
+                    Scaffold(
+                        modifier = Modifier
+                            .weight(1f)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .testTag("nour_main_scaffold"),
+                        topBar = {
+                            M3EAppBar(
+                                title = currentDestination.title,
+                                subtitle = appBarSubtitle,
+                                size = M3EAppBarSize.Small,
+                                scrollBehavior = scrollBehavior,
+                                testTag = "nour_top_app_bar"
+                            )
+                        }
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) { content() }
+                    }
+                }
+            }
+            M3EWindowSize.Compact -> {
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .testTag("nour_main_scaffold"),
+                    topBar = {
+                        M3EAppBar(
+                            title = currentDestination.title,
+                            subtitle = appBarSubtitle,
+                            size = M3EAppBarSize.Small,
+                            scrollBehavior = scrollBehavior,
+                            testTag = "nour_top_app_bar"
+                        )
+                    },
+                    bottomBar = {
+                        M3ENavBar(
+                            items = navItems,
+                            selectedRoute = currentDestination.route,
+                            onSelect = onSelectNav,
+                            modifier = Modifier.testTag("nour_bottom_navigation")
+                        )
+                    }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) { content() }
                 }
             }
         }

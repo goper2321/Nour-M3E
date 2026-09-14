@@ -277,6 +277,14 @@ fun ImmersiveSkyBackground(
  * - Weather app style countdown capsules and time-to-event callout.
  * - 4-tile weather celestial metrics row (Sunrise, Solar Zenith, Sunset, Nightfall) with custom SVG icons.
  */
+/**
+ * M3E expressive Salah countdown hero (port of m3e elevated-card + progress-indicator).
+ *
+ * Preserves the original astronomical countdown/progress math verbatim; only the
+ * container follows the shared M3E hierarchy: elevated card, header slot
+ * (eyebrow + next prayer + badges), celestial arc canvas, segmented countdown
+ * capsules, linear progress footer. Works in light + dark themes.
+ */
 @Composable
 fun CelestialPrayerHeroCard(
     prayerTimes: PrayerTimes,
@@ -287,10 +295,6 @@ fun CelestialPrayerHeroCard(
     val nowMillis = now.time
     val sunriseMillis = prayerTimes.sunrise.time
     val sunsetMillis = prayerTimes.maghrib.time
-    val fajrMillis = prayerTimes.fajr.time
-    val dhuhrMillis = prayerTimes.dhuhr.time
-    val asrMillis = prayerTimes.asr.time
-    val ishaMillis = prayerTimes.isha.time
 
     val isDaytime = nowMillis in sunriseMillis..sunsetMillis
 
@@ -322,17 +326,7 @@ fun CelestialPrayerHeroCard(
         getCelestialStage(prayerTimes, nowMillis)
     }
 
-    // Infinite animation for subtle celestial sun ray rotation and atmospheric twinkle
     val infiniteTransition = rememberInfiniteTransition(label = "celestial_effects")
-    val sunRayRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 30000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sun_ray_rotation"
-    )
     val starTwinkleAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
         targetValue = 0.95f,
@@ -353,83 +347,49 @@ fun CelestialPrayerHeroCard(
     val minutesFormatted = String.format(Locale.US, "%02d", minutes)
     val secondsFormatted = String.format(Locale.US, "%02d", seconds)
 
-    var showDetails by remember { mutableStateOf(false) }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
             .testTag("celestial_prayer_card"),
         shape = MaterialTheme.shapes.extraLarge,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.28f)),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        border = null
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 18.dp)
         ) {
-            // 1. Weather App Style Header: Category Eyebrow + Live Celestial Badge
+            // Header slot: eyebrow + stage + live badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category Eyebrow with Sun/Moon Cycle SVG
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.18f),
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_sun_moon_cycle),
-                                contentDescription = "Sun and Moon Cycle",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    Column {
-                        Text(
-                            text = "SUN & MOON CYCLE",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp,
-                            color = Color.White.copy(alpha = 0.85f)
-                        )
-                        Text(
-                            text = celestialStage.first,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                // Weather-style Event Badge (e.g. Daylight % or Night %)
+                Text(
+                    text = celestialStage.first.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                )
                 Surface(
-                    color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+                    shape = RoundedCornerShape(100.dp),
+                    color = MaterialTheme.colorScheme.primary
                 ) {
                     Text(
-                        text = if (isDaytime) "Daylight ${(daytimeProgress * 100).toInt()}%" else "Night ${(nighttimeProgress * 100).toInt()}%",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.95f),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        text = "LIVE",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // 2. Weather-App Style Primary Countdown Readout
+            // Primary countdown readout
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -439,165 +399,68 @@ fun CelestialPrayerHeroCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Next: ${countdownState.nextPrayer.displayName}",
-                            fontSize = 20.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = countdownState.nextPrayer.arabicName,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.9f)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = "Starts at ${prayerTimes.formattedTime(countdownState.nextPrayer)}",
+                        text = "Starts at ${prayerTimes.formattedTime(countdownState.nextPrayer)} • ${celestialStage.second}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.75f)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
-                }
-
-                // Segmented Weather-Style Countdown Display
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    WeatherCountdownCapsule(value = hoursFormatted, unit = "HR")
-                    Text(
-                        text = ":",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.65f)
-                    )
-                    WeatherCountdownCapsule(value = minutesFormatted, unit = "MIN")
-                    Text(
-                        text = ":",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.65f)
-                    )
-                    WeatherCountdownCapsule(value = secondsFormatted, unit = "SEC")
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Signature Weather App Sun & Moon Celestial Trajectory (Canvas + Fancy SVGs)
-            Box(
+            // Celestial arc (day dome + horizon + position marker)
+            val arcInk = MaterialTheme.colorScheme.onPrimaryContainer
+            val arcAccent = MaterialTheme.colorScheme.primary
+            Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(125.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.24f))
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .height(92.dp)
             ) {
-                // Weather-style Celestial Arc Canvas
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawCelestialWaveAndSky(
-                        isDaytime = isDaytime,
-                        dayProgress = daytimeProgress,
-                        nightProgress = nighttimeProgress,
-                        starTwinkle = starTwinkleAlpha
-                    )
-                }
+                drawCelestialWaveAndSky(
+                    isDaytime = isDaytime,
+                    dayProgress = daytimeProgress,
+                    nightProgress = nighttimeProgress,
+                    starTwinkle = starTwinkleAlpha,
+                    ink = arcInk,
+                    accent = arcAccent
+                )
+            }
 
-                // Render Fancy Animated Sun SVG or Fancy Moon SVG at the computed position
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (isDaytime) {
-                        // Sun Position along daytime parabolic arc
-                        val t = daytimeProgress
-                        val xFraction = 0.08f + (0.84f * t)
-                        val yFraction = 0.78f - (0.64f * 4 * t * (1 - t))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(
-                                    start = (xFraction * 280).dp,
-                                    top = (yFraction * 75).dp
-                                )
-                                .size(42.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Radiant rotating Sun SVG
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_fancy_sun),
-                                contentDescription = "Daylight Sun",
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .rotate(sunRayRotation)
-                            )
-                        }
-                    } else {
-                        // Moon Position along nocturnal wave arc
-                        val t = nighttimeProgress
-                        val xFraction = 0.08f + (0.84f * t)
-                        val yFraction = 0.78f - (0.60f * 4 * t * (1 - t))
-
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(
-                                    start = (xFraction * 280).dp,
-                                    top = (yFraction * 75).dp
-                                )
-                                .size(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Fancy Crescent Moon with twinkling stars
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_fancy_crescent_moon),
-                                contentDescription = "Nighttime Crescent Moon",
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Milestone Labels along the celestial horizon
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    CelestialMilestoneLabel(
-                        name = "Dawn",
-                        time = prayerTimes.formattedTime(PrayerName.FAJR),
-                        isActive = nowMillis in fajrMillis until sunriseMillis
-                    )
-                    CelestialMilestoneLabel(
-                        name = "Sunrise",
-                        time = prayerTimes.formattedTime(PrayerName.SUNRISE),
-                        isActive = nowMillis in sunriseMillis until dhuhrMillis
-                    )
-                    CelestialMilestoneLabel(
-                        name = "Zenith",
-                        time = prayerTimes.formattedTime(PrayerName.DHUHR),
-                        isActive = nowMillis in dhuhrMillis until asrMillis
-                    )
-                    CelestialMilestoneLabel(
-                        name = "Sunset",
-                        time = prayerTimes.formattedTime(PrayerName.MAGHRIB),
-                        isActive = nowMillis in sunsetMillis until ishaMillis
-                    )
-                    CelestialMilestoneLabel(
-                        name = "Dusk",
-                        time = prayerTimes.formattedTime(PrayerName.ISHA),
-                        isActive = nowMillis >= ishaMillis || nowMillis < fajrMillis
-                    )
-                }
+            // Segmented countdown capsules
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                WeatherCountdownCapsule(value = hoursFormatted, unit = "HR", modifier = Modifier.weight(1f))
+                Text(text = ":", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+                WeatherCountdownCapsule(value = minutesFormatted, unit = "MIN", modifier = Modifier.weight(1f))
+                Text(text = ":", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+                WeatherCountdownCapsule(value = secondsFormatted, unit = "SEC", modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 4. Weather App Progress Strip towards next Salah
+            // Progress footer slot
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -606,128 +469,29 @@ fun CelestialPrayerHeroCard(
                 ) {
                     Text(
                         text = "${countdownState.currentPrayer.displayName} → ${countdownState.nextPrayer.displayName}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.8f)
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
                     )
                     Text(
                         text = "${(countdownState.progress * 100).toInt()}% elapsed",
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 LinearProgressIndicator(
                     progress = { countdownState.progress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
-                    color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.20f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f)
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 5. Four-Tile Modern Weather Metrics Strip (Sunrise, Zenith, Sunset, Nightfall)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                WeatherMetricTile(
-                    iconRes = R.drawable.ic_weather_sunrise,
-                    label = "Sunrise",
-                    time = prayerTimes.formattedTime(PrayerName.SUNRISE),
-                    isPassed = nowMillis > sunriseMillis,
-                    modifier = Modifier.weight(1f)
-                )
-                WeatherMetricTile(
-                    iconRes = R.drawable.ic_weather_solar_noon,
-                    label = "Solar Noon",
-                    time = prayerTimes.formattedTime(PrayerName.DHUHR),
-                    isPassed = nowMillis > dhuhrMillis,
-                    modifier = Modifier.weight(1f)
-                )
-                WeatherMetricTile(
-                    iconRes = R.drawable.ic_weather_sunset,
-                    label = "Sunset",
-                    time = prayerTimes.formattedTime(PrayerName.MAGHRIB),
-                    isPassed = nowMillis > sunsetMillis,
-                    modifier = Modifier.weight(1f)
-                )
-                WeatherMetricTile(
-                    iconRes = R.drawable.ic_weather_twilight,
-                    label = "Nightfall",
-                    time = prayerTimes.formattedTime(PrayerName.ISHA),
-                    isPassed = nowMillis > ishaMillis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 6. Subtle Expandable Daylight / Night Summary Pill
-            Surface(
-                onClick = { showDetails = !showDetails },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.24f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val daylightDurationMillis = (sunsetMillis - sunriseMillis).coerceAtLeast(0L)
-                        val dlHours = daylightDurationMillis / (3600 * 1000)
-                        val dlMinutes = (daylightDurationMillis % (3600 * 1000)) / (60 * 1000)
-
-                        Text(
-                            text = "Daylight: ${dlHours}h ${dlMinutes}m • ${if (isDaytime) "Sun above horizon" else "Night cycle active"}",
-                            fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Medium
-                        )
-
-                        Text(
-                            text = if (showDetails) "Hide details ▲" else "Details ▼",
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = showDetails,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                        ) {
-                            Text(
-                                text = celestialStage.second,
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontWeight = FontWeight.Normal
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Adhan notifications & Qibla direction are synchronized with this exact solar trajectory.",
-                                fontSize = 10.sp,
-                                color = Color.White.copy(alpha = 0.65f)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -735,12 +499,16 @@ fun CelestialPrayerHeroCard(
 
 /**
  * Draws the 24-hour celestial wave path, horizon line, glow fill, and twinkling stars.
+ * Colors are passed in so the arc stays legible on primaryContainer in both themes
+ * (m3e state-layer alphas over on-primary-container).
  */
 private fun DrawScope.drawCelestialWaveAndSky(
     isDaytime: Boolean,
     dayProgress: Float,
     nightProgress: Float,
-    starTwinkle: Float
+    starTwinkle: Float,
+    ink: Color = Color(0xFF09090B),
+    accent: Color = Color(0xFF09090B)
 ) {
     val w = size.width
     val h = size.height
@@ -763,7 +531,7 @@ private fun DrawScope.drawCelestialWaveAndSky(
             val radius = if (i % 2 == 0) 1.6.dp.toPx() else 2.2.dp.toPx()
             val alpha = if (i % 2 == 0) starTwinkle else (1.2f - starTwinkle).coerceIn(0.3f, 1f)
             drawCircle(
-                color = Color.White.copy(alpha = alpha),
+                color = ink.copy(alpha = alpha * 0.7f),
                 radius = radius,
                 center = offset
             )
@@ -788,8 +556,8 @@ private fun DrawScope.drawCelestialWaveAndSky(
         path = fillPath,
         brush = Brush.verticalGradient(
             colors = listOf(
-                Color.White.copy(alpha = 0.16f),
-                Color.White.copy(alpha = 0.04f),
+                ink.copy(alpha = 0.14f),
+                ink.copy(alpha = 0.05f),
                 Color.Transparent
             ),
             startY = horizonY - waveHeight,
@@ -800,7 +568,7 @@ private fun DrawScope.drawCelestialWaveAndSky(
     // Dotted celestial trajectory path
     drawPath(
         path = dayArc,
-        color = Color.White.copy(alpha = 0.35f),
+        color = ink.copy(alpha = 0.45f),
         style = Stroke(
             width = 2.dp.toPx(),
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
@@ -809,7 +577,7 @@ private fun DrawScope.drawCelestialWaveAndSky(
 
     // 3. Horizon Reference Line (Weather app style)
     drawLine(
-        color = Color.White.copy(alpha = 0.25f),
+        color = ink.copy(alpha = 0.30f),
         start = Offset(0f, horizonY),
         end = Offset(w, horizonY),
         strokeWidth = 1.2.dp.toPx(),
@@ -823,7 +591,7 @@ private fun DrawScope.drawCelestialWaveAndSky(
 
     // Vertical dashed marker beam
     drawLine(
-        color = Color.White.copy(alpha = 0.40f),
+        color = accent.copy(alpha = 0.55f),
         start = Offset(currentX, currentY),
         end = Offset(currentX, horizonY),
         strokeWidth = 1.dp.toPx(),
@@ -832,24 +600,26 @@ private fun DrawScope.drawCelestialWaveAndSky(
 
     // Small glowing ground marker on the horizon
     drawCircle(
-        color = Color.White,
+        color = accent,
         radius = 3.dp.toPx(),
         center = Offset(currentX, horizonY)
     )
 }
 
 /**
- * Weather app style capsule for hours, minutes, and seconds.
+ * Countdown capsule — M3E tonal surface variant (was white-on-scrim glass).
  */
 @Composable
 private fun WeatherCountdownCapsule(
     value: String,
-    unit: String
+    unit: String,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f),
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
         shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -860,88 +630,14 @@ private fun WeatherCountdownCapsule(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = FontFamily.Monospace,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = unit,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
-                color = MonoPlatinum,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 0.5.sp
-            )
-        }
-    }
-}
-
-/**
- * Text label for milestones along the horizon (Dawn, Sunrise, Zenith, Sunset, Dusk).
- */
-@Composable
-private fun CelestialMilestoneLabel(
-    name: String,
-    time: String,
-    isActive: Boolean
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = name,
-            fontSize = 9.sp,
-            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
-            color = if (isActive) Color.White else Color.White.copy(alpha = 0.65f)
-        )
-        Text(
-            text = time,
-            fontSize = 8.sp,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            color = if (isActive) Color.White else Color.White.copy(alpha = 0.50f)
-        )
-    }
-}
-
-/**
- * Clean Weather Metric Tile (Sunrise, Solar Noon, Sunset, Nightfall) with vector SVG.
- */
-@Composable
-private fun WeatherMetricTile(
-    iconRes: Int,
-    label: String,
-    time: String,
-    isPassed: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.scrim.copy(alpha = if (isPassed) 0.28f else 0.40f),
-        border = BorderStroke(
-            1.dp,
-            if (isPassed) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.35f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = iconRes),
-                contentDescription = label,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.70f),
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = time,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isPassed) Color.White.copy(alpha = 0.75f) else Color.White,
-                maxLines = 1
             )
         }
     }
